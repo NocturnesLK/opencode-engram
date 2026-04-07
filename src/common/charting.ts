@@ -90,7 +90,7 @@ export function buildChartingText(
 ) {
   return `I lost context from my prior conversation. What remains is a lossy index of session **${sessionID}** — turn structure and truncated previews are preserved, but full message content, reasoning chains, and precise details are not.
 
-If I knew specific keywords — a file path, an identifier, or an error message — I would search directly with history_search. But right now I need the big picture first to understand what was being worked on, so I called history_browse_turns with num_before=${windows.recentTurns}:
+If I knew specific keywords — a file path, an identifier, or an error message — I would search directly with history_search. But right now I need the big picture first to understand what was being worked on, so I called history_browse_turns with num_before=${windows.recentTurns} and num_after=0:
 
 ${toJsonBlock(overview)}
 
