@@ -1,0 +1,48 @@
+{
+  "name": "opencode-engram",
+  "version": "0.1.0",
+  "description": "Pull-based history retrieval plugin for OpenCode.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NocturnesLK/opencode-engram.git"
+  },
+  "homepage": "https://github.com/NocturnesLK/opencode-engram#readme",
+  "bugs": {
+    "url": "https://github.com/NocturnesLK/opencode-engram/issues"
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "history",
+    "retrieval",
+    "agent",
+    "context"
+  ],
+  "type": "module",
+  "main": "./src/common/plugin.ts",
+  "files": [
+    "src"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.2.27",
+    "@opencode-ai/sdk": "1.2.27",
+    "@orama/orama": "^3.1.18",
+    "@orama/tokenizers": "^3.1.18"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@vitest/coverage-v8": "^3.2.4",
+    "vitest": "^3.2.4",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  }
+}
