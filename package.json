@@ -1,7 +1,7 @@
 {
   "name": "opencode-engram",
   "version": "0.1.0",
-  "description": "Pull-based history retrieval plugin for OpenCode.",
+  "description": "OpenCode plugin that gives agents on-demand access to full conversation history, replacing lossy compression with structured navigation.",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -13,11 +13,16 @@
   },
   "keywords": [
     "opencode",
+    "opencode-plugin",
     "plugin",
+    "agent",
+    "context",
     "history",
     "retrieval",
-    "agent",
-    "context"
+    "conversation",
+    "multi-agent",
+    "context-compression",
+    "context-window"
   ],
   "type": "module",
   "main": "./src/common/plugin.ts",

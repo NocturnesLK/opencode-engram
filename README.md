@@ -2,7 +2,7 @@
 
 [简体中文](./README.zh.md) | [繁體中文](./README.zht.md)
 
-A pull-based conversation history retrieval plugin for [OpenCode](https://github.com/opencode-ai/opencode).
+An [OpenCode](https://github.com/opencode-ai/opencode) plugin that gives agents on-demand access to full conversation history — replacing lossy context compression with structured navigation, and bridging context gaps in multi-agent workflows.
 
 Internet information is public-tier experience, local environment information is project-tier experience, and the conversation history agents accumulate during their work — reasoning chains, rejected paths, user constraints — is task-tier experience. Yet this history, the closest to actual work, almost always sinks into storage right after it's produced, never reused by subsequent agents. Engram treats conversation history as an equally important **third information source**, letting agents pull on demand during execution — at the moment of maximum information, the role that best understands the need autonomously decides what it needs.
 
