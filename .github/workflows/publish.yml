@@ -45,9 +45,6 @@ jobs:
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      - name: Upgrade npm for trusted publishing
-        run: npm install -g npm@11.12.1
-
       - name: Verify release tag matches package version
         run: |
           node --input-type=module -e 'import { readFileSync } from "node:fs"; const pkg = JSON.parse(readFileSync("package.json", "utf8")); const tag = process.env.GITHUB_REF_NAME; if (!tag || !tag.startsWith("v")) { console.error(`Release tag must start with v. Received: ${tag ?? "<missing>"}`); process.exit(1); } const version = tag.slice(1); if (pkg.version !== version) { console.error(`package.json version ${pkg.version} does not match release tag ${tag}`); process.exit(1); }'
