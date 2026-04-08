@@ -8,6 +8,10 @@ import {
   type PluginInput,
 } from "./common.ts";
 import { createHistoryBackend } from "../runtime/backends/index.ts";
+import type {
+  HistoryBackendProvider,
+  HistoryBackendResolverOptions,
+} from "../runtime/backends/index.ts";
 import {
   loadEngramConfig,
 } from "./config.ts";
@@ -192,8 +196,9 @@ async function isCompactionTextCompletion(
   sessionID: string,
   messageID: string,
   partID: string,
+  options?: HistoryBackendResolverOptions,
 ) {
-  const backend = createHistoryBackend(input);
+  const backend = createHistoryBackend(input, sessionID, options);
   const message = await backend.getMessage(sessionID, messageID);
   const targetPart = message.parts.find((part) => part.id === partID);
   if (!targetPart || targetPart.type !== "text") {
@@ -203,101 +208,125 @@ async function isCompactionTextCompletion(
   return message.info.role === "assistant" && message.info.summary === true;
 }
 
-export const EngramPlugin: Plugin = async (input) => {
-  const upstreamNavigatorState = createUpstreamNavigatorState();
-  const historyPromptState = createHistoryPromptState();
-  const chartingState = createChartingState();
-  const agentNamesBySession = new Map<string, string>();
+export interface EngramPluginOptions {
+  historyBackendProviders?: readonly HistoryBackendProvider[];
+}
+
+function toHistoryBackendResolverOptions(
+  options?: EngramPluginOptions,
+): HistoryBackendResolverOptions | undefined {
+  if (options?.historyBackendProviders === undefined) {
+    return undefined;
+  }
 
   return {
-    event: async ({ event }) => {
-      recordUpstreamNavigatorSession(upstreamNavigatorState, event);
-      if (event.type === "session.compacted") {
-        clearChartingPending(
-          chartingState,
-          event.properties.sessionID,
-        );
-      }
-    },
-    "chat.message": async (hookInput, output) => {
-      agentNamesBySession.set(hookInput.sessionID, output.message.agent);
-    },
-    "experimental.chat.system.transform": async (hookInput, output) => {
-      const config = await loadEngramConfig(input.directory, undefined, input.client);
+    providers: options.historyBackendProviders,
+  };
+}
 
-      // Upstream navigator prompt injection (only for child sessions with upstream_history enabled)
-      if (config.upstream_history.enable) {
-        const agentName = hookInput.sessionID
-          ? agentNamesBySession.get(hookInput.sessionID)
-          : undefined;
-        if (!isUpstreamHistoryDisabledForAgent(agentName, config)) {
-          await injectUpstreamNavigatorPrompt(
-            upstreamNavigatorState,
-            hookInput.sessionID,
-            output.system,
+/**
+ * Create the Engram plugin with optional history backend providers.
+ */
+export function createEngramPlugin(options?: EngramPluginOptions): Plugin {
+  const backendOptions = toHistoryBackendResolverOptions(options);
+
+  return async (input) => {
+    const upstreamNavigatorState = createUpstreamNavigatorState();
+    const historyPromptState = createHistoryPromptState();
+    const chartingState = createChartingState();
+    const agentNamesBySession = new Map<string, string>();
+
+    return {
+      event: async ({ event }) => {
+        recordUpstreamNavigatorSession(upstreamNavigatorState, event);
+        if (event.type === "session.compacted") {
+          clearChartingPending(
+            chartingState,
+            event.properties.sessionID,
           );
         }
-      }
+      },
+      "chat.message": async (hookInput, output) => {
+        agentNamesBySession.set(hookInput.sessionID, output.message.agent);
+      },
+      "experimental.chat.system.transform": async (hookInput, output) => {
+        const config = await loadEngramConfig(input.directory, undefined, input.client);
 
-      // Common history prompt injection (charting or upstream_history enabled)
-      if (config.context_charting.enable || config.upstream_history.enable) {
-        injectHistoryPrompt(historyPromptState, hookInput.sessionID, output.system);
-      }
-    },
-    "experimental.session.compacting": async (hookInput, output) => {
-      const config = await loadEngramConfig(input.directory, undefined, input.client);
-      if (!config.context_charting.enable) {
-        return;
-      }
-      output.prompt = buildMinimalCompactionPrompt();
-      markChartingPending(chartingState, hookInput.sessionID);
-    },
-    "experimental.text.complete": async (hookInput, output) => {
-      if (!hasPendingCharting(chartingState, hookInput.sessionID)) {
-        return;
-      }
+        // Upstream navigator prompt injection (only for child sessions with upstream_history enabled)
+        if (config.upstream_history.enable) {
+          const agentName = hookInput.sessionID
+            ? agentNamesBySession.get(hookInput.sessionID)
+            : undefined;
+          if (!isUpstreamHistoryDisabledForAgent(agentName, config)) {
+            await injectUpstreamNavigatorPrompt(
+              upstreamNavigatorState,
+              hookInput.sessionID,
+              output.system,
+            );
+          }
+        }
 
-      try {
+        // Common history prompt injection (charting or upstream_history enabled)
+        if (config.context_charting.enable || config.upstream_history.enable) {
+          injectHistoryPrompt(historyPromptState, hookInput.sessionID, output.system);
+        }
+      },
+      "experimental.session.compacting": async (hookInput, output) => {
         const config = await loadEngramConfig(input.directory, undefined, input.client);
         if (!config.context_charting.enable) {
           return;
         }
-
-        const isCompactionText = await isCompactionTextCompletion(
-          input,
-          hookInput.sessionID,
-          hookInput.messageID,
-          hookInput.partID,
-        );
-        if (!isCompactionText) {
+        output.prompt = buildMinimalCompactionPrompt();
+        markChartingPending(chartingState, hookInput.sessionID);
+      },
+      "experimental.text.complete": async (hookInput, output) => {
+        if (!hasPendingCharting(chartingState, hookInput.sessionID)) {
           return;
         }
 
-        const data = await loadChartingData(
-          input,
-          hookInput.sessionID,
-          config,
-        );
-        output.text = buildChartingText(
-          hookInput.sessionID,
-          data.overview,
-          data.latestTurnDetail,
-          {
-            recentTurns: config.context_charting.recent_turns,
-            recentMessages: config.context_charting.recent_messages,
-          },
-        );
-        clearChartingPending(
-          chartingState,
-          hookInput.sessionID,
-        );
-      } catch (error) {
-        await logChartingWarning(input, hookInput.sessionID, error);
-      }
-    },
-    tool: {
-      history_browse_turns: tool({
-        description: `Get a high-level overview of a session's history as turn-indexed summaries
+        try {
+          const config = await loadEngramConfig(input.directory, undefined, input.client);
+          if (!config.context_charting.enable) {
+            return;
+          }
+
+          const isCompactionText = await isCompactionTextCompletion(
+            input,
+            hookInput.sessionID,
+            hookInput.messageID,
+            hookInput.partID,
+            backendOptions,
+          );
+          if (!isCompactionText) {
+            return;
+          }
+
+          const data = await loadChartingData(
+            input,
+            hookInput.sessionID,
+            config,
+            backendOptions,
+          );
+          output.text = buildChartingText(
+            hookInput.sessionID,
+            data.overview,
+            data.latestTurnDetail,
+            {
+              recentTurns: config.context_charting.recent_turns,
+              recentMessages: config.context_charting.recent_messages,
+            },
+          );
+          clearChartingPending(
+            chartingState,
+            hookInput.sessionID,
+          );
+        } catch (error) {
+          await logChartingWarning(input, hookInput.sessionID, error);
+        }
+      },
+      tool: {
+        history_browse_turns: tool({
+          description: `Get a high-level overview of a session's history as turn-indexed summaries
 
 USE WHEN:
 - You need to understand the context, goals, or what happened in a session
@@ -308,52 +337,53 @@ DO NOT USE WHEN:
 - You need exact message detail -> use history_browse_messages or history_pull_message
 
 RETURNS: turn summaries in ascending turn_index order. Each turn includes user preview and message_id, plus assistant preview and total message count`,
-        args: {
-          session_id: tool.schema
-            .string()
-            .describe("Target session identifier"),
-          turn_index: tool.schema
-            .number()
-            .optional()
-            .describe("Target turn_index (starting from 1, not 0) for returning. Omit to automatically set the newest visible turn_index"),
-          num_before: tool.schema
-            .number()
-            .optional()
-            .describe("How many older turns before turn_index to include. Omit to exclude"),
-          num_after: tool.schema
-            .number()
-            .optional()
-            .describe("How many newer turns after turn_index to include. Omit to exclude"),
-        },
-        async execute(args, ctx) {
-          const sessionID = checkSessionId(args.session_id);
-          const turnIndex = normalizeOverviewTurnIndex(args.turn_index);
-          const numBefore = normalizeOverviewWindowValue(args.num_before, "num_before");
-          const numAfter = normalizeOverviewWindowValue(args.num_after, "num_after");
+          args: {
+            session_id: tool.schema
+              .string()
+              .describe("Target session identifier"),
+            turn_index: tool.schema
+              .number()
+              .optional()
+              .describe("Target turn_index (starting from 1, not 0) for returning. Omit to automatically set the newest visible turn_index"),
+            num_before: tool.schema
+              .number()
+              .optional()
+              .describe("How many older turns before turn_index to include. Omit to exclude"),
+            num_after: tool.schema
+              .number()
+              .optional()
+              .describe("How many newer turns after turn_index to include. Omit to exclude"),
+          },
+          async execute(args, ctx) {
+            const sessionID = checkSessionId(args.session_id);
+            const turnIndex = normalizeOverviewTurnIndex(args.turn_index);
+            const numBefore = normalizeOverviewWindowValue(args.num_before, "num_before");
+            const numAfter = normalizeOverviewWindowValue(args.num_after, "num_after");
 
-          return runCall(
-            input,
-            ctx,
-            "history_browse_turns",
-            sessionID,
-            {
-              session_id: args.session_id,
-              turn_index: turnIndex,
-              num_before: numBefore,
-              num_after: numAfter,
-            },
-            async (browse, config, journal) => {
-              return overviewData(input, browse, config, journal, {
-                turnIndex,
-                numBefore,
-                numAfter,
-              });
-            },
-          );
-        },
-      }),
-      history_browse_messages: tool({
-        description: `Browse session history around a specific message. Returns a message window in chronological order.
+            return runCall(
+              input,
+              ctx,
+              "history_browse_turns",
+              sessionID,
+              {
+                session_id: args.session_id,
+                turn_index: turnIndex,
+                num_before: numBefore,
+                num_after: numAfter,
+              },
+              async (browse, config, journal) => {
+                return overviewData(input, browse, config, journal, {
+                  turnIndex,
+                  numBefore,
+                  numAfter,
+                });
+              },
+              backendOptions,
+            );
+          },
+        }),
+        history_browse_messages: tool({
+          description: `Browse session history around a specific message. Returns a message window in chronological order.
 
 USE WHEN:
 - You need context, facts, or decisions from a session history that you don't currently have
@@ -366,57 +396,58 @@ DO NOT USE WHEN:
 - You already have a message_id and need full content -> use history_pull_message instead
 
 RETURNS: messages[] plus before_message_id / after_message_id anchors for extending the visible window`,
-        args: {
-          session_id: tool.schema
-            .string()
-            .describe("Target session identifier"),
-          message_id: tool.schema
-            .string()
-            .optional()
-            .describe("Anchor message_id. Omit to automatically set the newest visible message_id"),
-          num_before: tool.schema
-            .number()
-            .optional()
-            .describe("How many older visible messages to include. Omit to exclude"),
-          num_after: tool.schema
-            .number()
-            .optional()
-            .describe("How many newer visible messages to include. Omit to exclude"),
-        },
-        async execute(args, ctx) {
-          const messageID = normalizeOptionalMessageId(args.message_id);
-          const numBefore = normalizeOverviewWindowValue(args.num_before, "num_before");
-          const numAfter = normalizeOverviewWindowValue(args.num_after, "num_after");
+          args: {
+            session_id: tool.schema
+              .string()
+              .describe("Target session identifier"),
+            message_id: tool.schema
+              .string()
+              .optional()
+              .describe("Anchor message_id. Omit to automatically set the newest visible message_id"),
+            num_before: tool.schema
+              .number()
+              .optional()
+              .describe("How many older visible messages to include. Omit to exclude"),
+            num_after: tool.schema
+              .number()
+              .optional()
+              .describe("How many newer visible messages to include. Omit to exclude"),
+          },
+          async execute(args, ctx) {
+            const messageID = normalizeOptionalMessageId(args.message_id);
+            const numBefore = normalizeOverviewWindowValue(args.num_before, "num_before");
+            const numAfter = normalizeOverviewWindowValue(args.num_after, "num_after");
 
-          return runCall(
-            input,
-            ctx,
-            "history_browse_messages",
-            checkSessionId(args.session_id),
-            {
-              session_id: args.session_id,
-              message_id: messageID,
-              num_before: numBefore,
-              num_after: numAfter,
-            },
-            async (browse, config, journal) => {
-              return browseData(
-                input,
-                browse,
-                config,
-                journal,
-                {
-                  messageID,
-                  numBefore,
-                  numAfter,
-                },
-              );
-            },
-          );
-        },
-      }),
-      history_pull_message: tool({
-        description: `Read a full message from a session's history.
+            return runCall(
+              input,
+              ctx,
+              "history_browse_messages",
+              checkSessionId(args.session_id),
+              {
+                session_id: args.session_id,
+                message_id: messageID,
+                num_before: numBefore,
+                num_after: numAfter,
+              },
+              async (browse, config, journal) => {
+                return browseData(
+                  input,
+                  browse,
+                  config,
+                  journal,
+                  {
+                    messageID,
+                    numBefore,
+                    numAfter,
+                  },
+                );
+              },
+              backendOptions,
+            );
+          },
+        }),
+        history_pull_message: tool({
+          description: `Read a full message from a session's history.
 
 USE WHEN:
 - You have a message_id and need detail beyond the preview
@@ -426,45 +457,46 @@ DO NOT USE WHEN:
 - You only need one truncated section -> use history_pull_part instead
 
 RETURNS: message metadata including turn_index, plus sections[] in conversation order. Long sections are truncated and include a part_id for follow-up`,
-        args: {
-          session_id: tool.schema
-            .string()
-            .describe("Target session identifier"),
-          message_id: tool.schema
-            .string()
-            .describe(
-              "Message identifier",
-            ),
-        },
-        async execute(args, ctx) {
-          const sessionID = checkSessionId(args.session_id);
-          checkMessageId(args.message_id);
-          const messageID = args.message_id.trim();
+          args: {
+            session_id: tool.schema
+              .string()
+              .describe("Target session identifier"),
+            message_id: tool.schema
+              .string()
+              .describe(
+                "Message identifier",
+              ),
+          },
+          async execute(args, ctx) {
+            const sessionID = checkSessionId(args.session_id);
+            checkMessageId(args.message_id);
+            const messageID = args.message_id.trim();
 
-          return runCall(
-            input,
-            ctx,
-            "history_pull_message",
-            sessionID,
-            {
-              session_id: args.session_id,
-              message_id: args.message_id,
-            },
-            async (browse, config, journal) => {
-              return readData(
-                input,
-                browse,
-                config,
-                messageID,
-                undefined,
-                journal,
-              );
-            },
-          );
-        },
-      }),
-      history_pull_part: tool({
-        description: `Read the full content of a specific truncated section from a session message.
+            return runCall(
+              input,
+              ctx,
+              "history_pull_message",
+              sessionID,
+              {
+                session_id: args.session_id,
+                message_id: args.message_id,
+              },
+              async (browse, config, journal) => {
+                return readData(
+                  input,
+                  browse,
+                  config,
+                  messageID,
+                  undefined,
+                  journal,
+                );
+              },
+              backendOptions,
+            );
+          },
+        }),
+        history_pull_part: tool({
+          description: `Read the full content of a specific truncated section from a session message.
 
 USE WHEN:
 - A prior read returned a truncated section with a part_id and you need the full content
@@ -475,52 +507,53 @@ DO NOT USE WHEN:
 - You need the full message context -> use history_pull_message instead
 
 RETURNS: full content of that single section only`,
-        args: {
-          session_id: tool.schema
-            .string()
-            .describe("Target session identifier"),
-          message_id: tool.schema
-            .string()
-            .describe(
-              "Message identifier",
-            ),
-          part_id: tool.schema
-            .string()
-            .describe(
-              "Part identifier from a truncated section",
-            ),
-        },
-        async execute(args, ctx) {
-          const sessionID = checkSessionId(args.session_id);
-          checkMessageId(args.message_id);
-          const messageID = args.message_id.trim();
-          const partID = normalizePartId(args.part_id);
+          args: {
+            session_id: tool.schema
+              .string()
+              .describe("Target session identifier"),
+            message_id: tool.schema
+              .string()
+              .describe(
+                "Message identifier",
+              ),
+            part_id: tool.schema
+              .string()
+              .describe(
+                "Part identifier from a truncated section",
+              ),
+          },
+          async execute(args, ctx) {
+            const sessionID = checkSessionId(args.session_id);
+            checkMessageId(args.message_id);
+            const messageID = args.message_id.trim();
+            const partID = normalizePartId(args.part_id);
 
-          return runCall(
-            input,
-            ctx,
-            "history_pull_part",
-            sessionID,
-            {
-              session_id: args.session_id,
-              message_id: args.message_id,
-              part_id: args.part_id,
-            },
-            async (browse, config, journal) => {
-              return readData(
-                input,
-                browse,
-                config,
-                messageID,
-                partID,
-                journal,
-              );
-            },
-          );
-        },
-      }),
-      history_search: tool({
-        description: `Search a session's history by keywords. Returns matching messages with context snippets.
+            return runCall(
+              input,
+              ctx,
+              "history_pull_part",
+              sessionID,
+              {
+                session_id: args.session_id,
+                message_id: args.message_id,
+                part_id: args.part_id,
+              },
+              async (browse, config, journal) => {
+                return readData(
+                  input,
+                  browse,
+                  config,
+                  messageID,
+                  partID,
+                  journal,
+                );
+              },
+              backendOptions,
+            );
+          },
+        }),
+        history_search: tool({
+          description: `Search a session's history by keywords. Returns matching messages with context snippets.
 
 USE WHEN:
 - You need to find specific information (facts, plans, identifiers, errors, etc.) in a session history
@@ -568,19 +601,25 @@ RETURNS: Matching messages grouped by relevance. Each message includes role, tur
               const types = normalizeSearchTypes(args.type);
               const searchInput = buildSearchInput(query, literal, types, config);
 
-              return searchData(
-                input,
-                browse,
-                config,
-                searchInput,
-                journal,
-              );
-            },
-          );
-        },
-      }),
-    },
+                return searchData(
+                  input,
+                  browse,
+                  config,
+                  searchInput,
+                  journal,
+                );
+              },
+              backendOptions,
+            );
+          },
+        }),
+      },
+    };
   };
-};
+}
+
+export const EngramPlugin = createEngramPlugin();
+
+export type { HistoryBackendProvider };
 
 export default EngramPlugin;

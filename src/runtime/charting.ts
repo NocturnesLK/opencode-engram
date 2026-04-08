@@ -1,6 +1,7 @@
 import type { PluginInput } from "../common/common.ts";
 import type { EngramConfig } from "../common/config.ts";
 import type { BrowseOutput, OverviewOutput } from "../domain/types.ts";
+import type { HistoryBackendResolverOptions } from "./backends/index.ts";
 
 import { createBrowseContext, resolveSessionTarget } from "../core/index.ts";
 import { createHistoryBackend } from "./backends/index.ts";
@@ -35,9 +36,10 @@ export async function loadChartingData(
   input: PluginInput,
   sessionID: string,
   config: EngramConfig,
+  options?: HistoryBackendResolverOptions,
 ): Promise<ChartingData> {
   const journal = log(input.client, sessionID);
-  const backend = createHistoryBackend(input);
+  const backend = createHistoryBackend(input, sessionID, options);
   const target = await resolveSessionTarget(backend, sessionID);
   const overviewBrowse = createBrowseContext(target, true, backend);
   const overviewState = await loadOverviewState(input, overviewBrowse, config, journal);

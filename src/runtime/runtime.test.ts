@@ -12,6 +12,7 @@ import { loadChartingData } from "./charting.ts";
 import type { EngramConfig } from "../common/config.ts";
 import type { PluginInput, ToolContext } from "../common/common.ts";
 import type { BrowseContext, SessionTarget } from "../core/index.ts";
+import type { HistoryBackend } from "../core/history-backend.ts";
 import { clearTurnCache, setTurnCache, buildFingerprint } from "../core/turn-index.ts";
 
 type MessageBundle = import("./message-io.ts").MessageBundle;
@@ -261,6 +262,22 @@ function makeJournal() {
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+  };
+}
+
+function makeProviderBackend(name: string): HistoryBackend {
+  return {
+    getSession: vi.fn(async (sessionId: string) => ({
+      id: sessionId,
+      title: `${name} Session`,
+      version: 1,
+      time: { updated: 1 },
+    })),
+    listMessages: vi.fn(async () => ({
+      msgs: [],
+      nextCursor: undefined,
+    })),
+    getMessage: vi.fn(),
   };
 }
 
@@ -2635,5 +2652,35 @@ describe("runtime/runCall", () => {
         async () => ({ ok: true }),
       ),
     ).rejects.toThrow("Session 'does-not-exist' not found");
+  });
+
+  test("routes through matching provider backend when available", async () => {
+    const sessionID = "provider-session";
+    const input = { client: makeClient({ sessions: new Map(), messages: new Map() }), directory: "/project" } as unknown as PluginInput;
+    const providerBackend = makeProviderBackend("Provider");
+    const matchesSessionId = vi.fn((value: string) => value === sessionID);
+    const createBackend = vi.fn(() => providerBackend);
+    const ctx: ToolContext = {
+      sessionID: "anchor",
+      messageID: "m",
+      metadata: vi.fn(),
+    };
+
+    const out = await runCall(
+      input,
+      ctx,
+      "history_browse_turns",
+      sessionID,
+      {},
+      async () => ({ ok: true }),
+      {
+        providers: [{ matchesSessionId, createBackend }],
+      },
+    );
+
+    expect(JSON.parse(out)).toEqual({ ok: true });
+    expect(matchesSessionId).toHaveBeenCalledWith(sessionID);
+    expect(createBackend).toHaveBeenCalledWith(input);
+    expect(providerBackend.getSession).toHaveBeenCalledWith(sessionID);
   });
 });

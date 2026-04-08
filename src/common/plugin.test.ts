@@ -143,6 +143,7 @@ import { readFile } from "node:fs/promises";
 import { loadEngramConfig } from "./config.ts";
 import { browseData, overviewData, readData, runCall, searchData } from "../runtime/runtime.ts";
 import { loadChartingData } from "../runtime/charting.ts";
+import type { HistoryBackend } from "../core/history-backend.ts";
 import {
   buildChartingText,
   buildMinimalCompactionPrompt,
@@ -155,7 +156,11 @@ import {
 import {
   builtInHistoryPromptBody,
 } from "./history-prompt.ts";
-import { EngramPlugin } from "./plugin.ts";
+import EngramPluginDefault, {
+  EngramPlugin,
+  createEngramPlugin,
+  type HistoryBackendProvider,
+} from "./plugin.ts";
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -293,6 +298,53 @@ function makeChatMessageOutput(agent: string) {
   };
 }
 
+function makeProviderBackend() {
+  return {
+    getSession: vi.fn(async (sessionId: string) => ({
+      id: sessionId,
+      title: "Provider Session",
+      version: 1,
+      time: { updated: 1 },
+    })),
+    listMessages: vi.fn(async () => ({
+      msgs: [],
+      nextCursor: undefined,
+    })),
+    getMessage: vi.fn(async (_sessionId: string, messageId: string) => ({
+      info: {
+        id: messageId,
+        role: "assistant",
+        summary: true,
+      },
+      parts: [
+        {
+          id: "p1",
+          type: "text",
+          messageID: messageId,
+          text: "provider summary",
+        },
+      ],
+    })),
+  } as unknown as HistoryBackend;
+}
+
+function makeHistoryBackendProvider(
+  backend: HistoryBackend,
+  matchesSessionId: (sessionId: string) => boolean,
+) {
+  const matchesSessionIdMock = vi.fn(matchesSessionId);
+  const createBackendMock = vi.fn(() => backend);
+
+  return {
+    provider: {
+      matchesSessionId: matchesSessionIdMock,
+      createBackend: createBackendMock,
+    } satisfies HistoryBackendProvider,
+    matchesSessionIdMock,
+    createBackendMock,
+  };
+}
+
 function makeCtx() {
   return {
     sessionID: "anchor",
@@ -312,6 +364,84 @@ describe("plugin/tool registration", () => {
       "history_pull_part",
       "history_search",
     ]);
+  });
+
+  test("default export remains directly usable", async () => {
+    expect(EngramPluginDefault).toBe(EngramPlugin);
+
+    const plugin = await EngramPluginDefault(makeInput());
+
+    expect(Object.keys(plugin.tool ?? {})).toEqual([
+      "history_browse_turns",
+      "history_browse_messages",
+      "history_pull_message",
+      "history_pull_part",
+      "history_search",
+    ]);
+  });
+});
+
+describe("plugin factory", () => {
+  test("forwards providers to runtime tool routing", async () => {
+    const { provider } = makeHistoryBackendProvider(
+      makeProviderBackend(),
+      (sessionId) => sessionId === "provider-session",
+    );
+    const plugin = await createEngramPlugin({
+      historyBackendProviders: [provider],
+    })(makeInput());
+
+    await (plugin.tool as any).history_browse_turns.execute({ session_id: "provider-session" }, makeCtx());
+
+    expect(vi.mocked(runCall)).toHaveBeenCalledOnce();
+    expect(vi.mocked(runCall).mock.calls[0]?.[6]).toEqual({
+      providers: [provider],
+    });
+  });
+
+  test("routes compaction reads through matching provider backends", async () => {
+    const providerBackend = makeProviderBackend();
+    const { provider, matchesSessionIdMock, createBackendMock } = makeHistoryBackendProvider(
+      providerBackend,
+      (sessionId) => sessionId === "provider-session",
+    );
+    const cfg = makeConfig({ upstream: true });
+    cfg.context_charting.enable = true;
+    vi.mocked(loadEngramConfig)
+      .mockResolvedValueOnce(cfg)
+      .mockResolvedValueOnce(cfg);
+
+    const input = makeInput();
+    (input.client.session.message as any).mockImplementation(async () => {
+      throw new Error("OpenCode SDK message client should not be used");
+    });
+
+    const plugin = await createEngramPlugin({
+      historyBackendProviders: [provider],
+    })(input);
+    await (plugin as any)["experimental.session.compacting"](
+      { sessionID: "provider-session" },
+      { context: [], prompt: undefined },
+    );
+
+    const output = { text: "original" };
+    await (plugin as any)["experimental.text.complete"](
+      { sessionID: "provider-session", messageID: "m1", partID: "p1" },
+      output,
+    );
+
+    expect(matchesSessionIdMock).toHaveBeenCalledWith("provider-session");
+    expect(createBackendMock).toHaveBeenCalledWith(input);
+    expect(input.client.session.message).not.toHaveBeenCalled();
+    expect(vi.mocked(loadChartingData)).toHaveBeenCalledWith(
+      input,
+      "provider-session",
+      cfg,
+      {
+        providers: [provider],
+      },
+    );
+    expect(output.text).not.toBe("original");
   });
 });
 
@@ -682,6 +812,7 @@ describe("plugin/hooks", () => {
       expect.objectContaining({ directory: "/project" }),
       "anchor",
       cfg,
+      undefined,
     );
     expect(output.text).toBe(buildChartingText(
       "anchor",

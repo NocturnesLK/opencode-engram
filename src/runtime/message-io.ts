@@ -6,6 +6,7 @@ import type {
   MessageRole,
   NormalizedMessage,
 } from "../domain/types.ts";
+import type { HistoryBackendResolverOptions } from "./backends/index.ts";
 
 import { resolveHistoryBackend } from "./backends/index.ts";
 
@@ -129,8 +130,9 @@ export async function getMessagePage(
   limit: number,
   cursor?: string,
   backend?: HistoryBackend,
+  options?: HistoryBackendResolverOptions,
 ) {
-  const page = await resolveHistoryBackend(input, backend).listMessages(sessionID, {
+  const page = await resolveHistoryBackend(input, sessionID, backend, options).listMessages(sessionID, {
     limit,
     before: cursor,
   });
@@ -142,8 +144,9 @@ export async function getMessage(
   sessionID: string,
   messageID: string,
   backend?: HistoryBackend,
+  options?: HistoryBackendResolverOptions,
 ) {
-  return requireMessageBundleRole(await resolveHistoryBackend(input, backend).getMessage(sessionID, messageID));
+  return requireMessageBundleRole(await resolveHistoryBackend(input, sessionID, backend, options).getMessage(sessionID, messageID));
 }
 
 /**
@@ -156,6 +159,7 @@ export async function getAllMessages(
   pageSize: number,
   seedPage?: MessagePage,
   backend?: HistoryBackend,
+  options?: HistoryBackendResolverOptions,
 ) {
   const messages: MessageBundle[] = [];
   const seenCursors = new Set<string>();
@@ -171,7 +175,7 @@ export async function getAllMessages(
   }
 
   while (true) {
-    const page = await getMessagePage(input, sessionID, pageSize, cursor, backend);
+    const page = await getMessagePage(input, sessionID, pageSize, cursor, backend, options);
     messages.push(...page.msgs);
 
     if (!page.next_cursor) {

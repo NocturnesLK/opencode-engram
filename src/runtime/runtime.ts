@@ -54,6 +54,7 @@ import {
 } from "./debug.ts";
 import { type MessageBundle, type MessagePage, toNormalizedMessage, sortMessagesChronological, sortMessagesNewestFirst, getMessage, getAllMessages, internalScanPageSize, requireMessageRole } from "./message-io.ts";
 import { createHistoryBackend, resolveHistoryBackend } from "./backends/index.ts";
+import type { HistoryBackendResolverOptions } from "./backends/index.ts";
 import { getSessionFingerprint, fetchTurnItems, getTurnMapWithFallback } from "./turn-resolve.ts";
 import { type Logger, log } from "./logger.ts";
 
@@ -140,6 +141,7 @@ export async function runCall<TOutput extends object>(
     config: EngramConfig,
     journal: Logger,
   ) => Promise<TOutput>,
+  options?: HistoryBackendResolverOptions,
 ) {
   const journal = log(input.client, ctx.sessionID);
   const startedAt = performance.now();
@@ -158,7 +160,7 @@ export async function runCall<TOutput extends object>(
       await ensureDebugGitIgnore(projectRoot);
     }
 
-    const backend = createHistoryBackend(input);
+    const backend = createHistoryBackend(input, sessionId, options);
     const target = await resolveSessionTarget(backend, sessionId);
 
     targetSessionID = target.session.id;
@@ -291,7 +293,7 @@ export async function browseData(
 ) {
   const target = browse.target;
   const targetSession = target.session;
-  const backend = resolveHistoryBackend(input, browse.backend);
+  const backend = resolveHistoryBackend(input, targetSession.id, browse.backend);
   const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
   const visibleMessages = browse.selfSession
     ? filterPreCompactionMessages(allRaw)
@@ -323,10 +325,10 @@ export async function browseData(
 
   const fingerprint = getSessionFingerprint(targetSession);
   const requiredIds = windowMessages.map((msg) => msg.info.id);
-  const { turnMap } = await getTurnMapWithCache(
-    targetSession.id,
-    fingerprint,
-    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend),
+    const { turnMap } = await getTurnMapWithCache(
+      targetSession.id,
+      fingerprint,
+      () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend),
     computeTurns,
     journal,
   );
@@ -577,7 +579,7 @@ export async function loadOverviewState(
 ): Promise<OverviewState> {
   const target = browse.target;
   const targetSession = target.session;
-  const backend = resolveHistoryBackend(input, browse.backend);
+  const backend = resolveHistoryBackend(input, targetSession.id, browse.backend);
   const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
 
   const turnSourceMessages = browse.selfSession
@@ -774,7 +776,7 @@ export async function readData(
   journal: Logger,
 ): Promise<Record<string, unknown>> {
   const target = browse.target;
-  const backend = resolveHistoryBackend(input, browse.backend);
+  const backend = resolveHistoryBackend(input, target.session.id, browse.backend);
   if (!partID) {
     return readMessageDetail(input, target, config, messageID, journal, backend);
   }
@@ -909,7 +911,7 @@ export async function searchData(
   journal: Logger,
 ): Promise<SearchOutput> {
   const target = browse.target;
-  const backend = resolveHistoryBackend(input, browse.backend);
+  const backend = resolveHistoryBackend(input, target.session.id, browse.backend);
 
   const toError = (error: unknown): Error => {
     if (error instanceof Error) {

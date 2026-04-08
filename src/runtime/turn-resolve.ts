@@ -1,6 +1,7 @@
 import { computeTurns, type TurnComputeItem } from "../domain/domain.ts";
 import type { PluginInput } from "../common/common.ts";
 import type { HistoryBackend } from "../core/history-backend.ts";
+import type { HistoryBackendResolverOptions } from "./backends/index.ts";
 import {
   buildFingerprint,
   clearTurnCache,
@@ -46,8 +47,9 @@ export async function fetchTurnItems(
   scanPageSize: number,
   seedPage?: MessagePage,
   backend?: HistoryBackend,
+  options?: HistoryBackendResolverOptions,
 ): Promise<TurnComputeItem[]> {
-  const allMessages = await getAllMessages(input, sessionId, scanPageSize, seedPage, backend);
+  const allMessages = await getAllMessages(input, sessionId, scanPageSize, seedPage, backend, options);
   return allMessages.map((msg): TurnComputeItem => ({
     id: msg.info.id,
     role: requireMessageRole(msg.info.role),
@@ -77,6 +79,7 @@ export async function getTurnMapWithFallback(
   requiredIds: string[],
   journal: Logger,
   backend?: HistoryBackend,
+  options?: HistoryBackendResolverOptions,
 ): Promise<Map<string, number>> {
   const targetSession = target.session;
   const fingerprint = getSessionFingerprint(targetSession);
@@ -84,7 +87,7 @@ export async function getTurnMapWithFallback(
   const { turnMap: initialTurnMap } = await getTurnMapWithCache(
     targetSession.id,
     fingerprint,
-    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend),
+    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend, options),
     computeTurns,
     journal,
   );
@@ -106,7 +109,7 @@ export async function getTurnMapWithFallback(
   const { turnMap: rebuiltTurnMap } = await getTurnMapWithCache(
     targetSession.id,
     fingerprint,
-    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend),
+    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend, options),
     computeTurns,
     journal,
   );
