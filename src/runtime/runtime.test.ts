@@ -1526,7 +1526,7 @@ describe("runtime/overviewData", () => {
     });
   });
 
-  test("reports hidden turn_index with guidance to retry nearby visible turns", async () => {
+  test("returns visible turns from the requested window even when turn_index is hidden", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1561,16 +1561,86 @@ describe("runtime/overviewData", () => {
       },
     };
 
-    await expect(
-      overviewData(input, makeSelfBrowse(target), config, journal, {
-        turnIndex: 2,
-        numBefore: 0,
-        numAfter: 0,
-      }),
-    ).rejects.toThrow("Turn 2 is hidden in this session view. Try a nearby visible turn instead.");
+    const out = await overviewData(input, makeSelfBrowse(target), config, journal, {
+      turnIndex: 2,
+      numBefore: 1,
+      numAfter: 1,
+    });
+
+    expect(out.turns).toEqual([
+      {
+        turn_index: 1,
+        user: {
+          preview: "first user",
+          message_id: "m1",
+        },
+        assistant: null,
+      },
+      {
+        turn_index: 3,
+        user: {
+          preview: "second user",
+          message_id: "m3",
+        },
+        assistant: {
+          preview: "second answer",
+          total_messages: 1,
+        },
+      },
+    ]);
   });
 
-  test("reports missing turn_index when turn does not exist", async () => {
+  test("returns visible turns from the requested window even when turn_index is missing", async () => {
+    const sessionID = "parent";
+    const store = {
+      sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
+        [sessionID, { id: sessionID, title: "T", version: 1, time: { updated: 1 } }],
+      ]),
+      messages: new Map<string, MessageBundle[]>([
+        [
+          sessionID,
+          [
+            makeMessageBundle(sessionID, "m2", "assistant", 2, [makeTextPart("m2", "p2", "first answer")]),
+            makeMessageBundle(sessionID, "m1", "user", 1, [makeTextPart("m1", "p1", "first user")]),
+          ],
+        ],
+      ]),
+    };
+    const input = { client: makeClient(store), directory: "/project" } as unknown as PluginInput;
+    const config = makeConfig();
+    const journal = makeJournal();
+    const target: SessionTarget = {
+      session: {
+        id: sessionID,
+        title: "T",
+        version: 1,
+        updatedAt: 1,
+        parentId: undefined,
+      },
+    };
+
+    const out = await overviewData(input, makeSelfBrowse(target), config, journal, {
+      turnIndex: 0,
+      numBefore: 0,
+      numAfter: 2,
+    });
+
+    expect(out.turns).toEqual([
+      {
+        turn_index: 1,
+        user: {
+          preview: "first user",
+          message_id: "m1",
+        },
+        assistant: {
+          preview: "first answer",
+          total_messages: 1,
+        },
+      },
+    ]);
+  });
+
+  test("reports an empty requested window for self sessions", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1605,10 +1675,12 @@ describe("runtime/overviewData", () => {
         numBefore: 0,
         numAfter: 0,
       }),
-    ).rejects.toThrow("Turn 99 not found in history.");
+    ).rejects.toThrow(
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+    );
   });
 
-  test("reports missing turn_index for non-self sessions too", async () => {
+  test("reports an empty requested window for non-self sessions too", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1643,7 +1715,9 @@ describe("runtime/overviewData", () => {
         numBefore: 0,
         numAfter: 0,
       }),
-    ).rejects.toThrow("Turn 99 not found in history.");
+    ).rejects.toThrow(
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+    );
   });
 
   test("full self-session overview removes all retained compaction triggers", async () => {

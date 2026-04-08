@@ -314,8 +314,7 @@ Search session history by keyword or literal string.
 - `Failed to load session '<session_id>'. This may be a temporary issue — try again.`
 - `Message '<message_id>' not found in history. It may be an invalid message_id.`
 - `Message '<message_id>' is hidden in this session view. Try a nearby visible message instead.`
-- `Turn <turn_index> not found in history.`
-- `Turn <turn_index> is hidden in this session view. Try a nearby visible turn instead.`
+- `The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit turn_index.`
 - `Failed to read session messages. This may be a temporary issue — try again.`
 
 ### Message Read Errors

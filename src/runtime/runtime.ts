@@ -611,26 +611,29 @@ function buildOverviewTurnWindow(
 ): OverviewStateTurn[] {
   if (state.turns.length === 0) {
     if (request.turnIndex !== undefined) {
-      if (state.allTurns.includes(request.turnIndex)) {
-        throw new Error(`Turn ${request.turnIndex} is hidden in this session view. Try a nearby visible turn instead.`);
-      }
-      throw new Error(`Turn ${request.turnIndex} not found in history.`);
+      throw new Error(
+        "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+      );
     }
     return [];
   }
 
   const targetTurn = request.turnIndex ?? state.turns.at(-1)!.turn;
-  const visibleTurn = state.turns.find((turn) => turn.turn === targetTurn);
-  if (!visibleTurn) {
-    if (state.allTurns.includes(targetTurn)) {
-      throw new Error(`Turn ${targetTurn} is hidden in this session view. Try a nearby visible turn instead.`);
-    }
-    throw new Error(`Turn ${targetTurn} not found in history.`);
-  }
-
   const minTurn = targetTurn - request.numBefore;
   const maxTurn = targetTurn + request.numAfter;
-  return state.turns.filter((turn) => turn.turn >= minTurn && turn.turn <= maxTurn);
+  const turns = state.turns.filter((turn) => turn.turn >= minTurn && turn.turn <= maxTurn);
+
+  if (turns.length > 0) {
+    return turns;
+  }
+
+  if (request.turnIndex !== undefined) {
+    throw new Error(
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+    );
+  }
+
+  return [];
 }
 
 export async function overviewData(
