@@ -55,6 +55,6 @@ describe("common/history-prompt", () => {
   test("builtInHistoryPromptBody contains key content", () => {
     expect(builtInHistoryPromptBody).toContain("## Session History");
     expect(builtInHistoryPromptBody).toContain("manual browse-window scanning");
-    expect(builtInHistoryPromptBody).toContain("### Turn Mechanics");
+    expect(builtInHistoryPromptBody).toContain("### Efficiency");
   });
 });
