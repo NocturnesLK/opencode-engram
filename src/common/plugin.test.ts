@@ -422,11 +422,11 @@ describe("plugin/tool argument validation", () => {
     await (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi" }, ctx);
     expect(vi.mocked(searchData)).toHaveBeenCalled();
     const searchInput = vi.mocked(searchData).mock.calls.at(-1)?.[3];
-    expect(searchInput).toEqual({ query: "hi", literal: false, limit: 5, types: ["text"] });
+    expect(searchInput).toEqual({ query: "hi", literal: false, limit: 5, types: ["text", "tool"] });
 
     await (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", literal: true }, ctx);
     const searchInput2 = vi.mocked(searchData).mock.calls.at(-1)?.[3];
-    expect(searchInput2).toEqual({ query: "hi", literal: true, limit: 5, types: ["text"] });
+    expect(searchInput2).toEqual({ query: "hi", literal: true, limit: 5, types: ["text", "tool"] });
 
     await (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: ["tool", "reasoning", "tool"] }, ctx);
     const searchInput3 = vi.mocked(searchData).mock.calls.at(-1)?.[3];

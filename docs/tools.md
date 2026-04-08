@@ -250,7 +250,7 @@ Search session history by keyword or literal string.
 - `session_id`: Required. Target session ID.
 - `query`: Required. Search keywords, maximum length `500`. Short specific terms work best — an identifier like `computeTurns` beats a generic word like `function`.
 - `literal`: Optional. Default `false`. If true, match the query as an exact case-sensitive substring. Use for file paths, identifiers, error codes.
-- `type`: Optional. Default `["text"]`. One or more of `text`, `tool`, `reasoning`. Only those content types are searched and returned.
+- `type`: Optional. Default `["text", "tool"]`. One or more of `text`, `tool`, `reasoning`. Only those content types are searched and returned.
 
 ### Behavior
 

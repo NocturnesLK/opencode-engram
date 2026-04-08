@@ -123,7 +123,7 @@ function normalizeSearchLiteral(literal?: boolean): boolean {
 
 function normalizeSearchTypes(value?: string[]): SearchPartType[] {
   if (value === undefined) {
-    return ["text"];
+    return ["text", "tool"];
   }
 
   if (!Array.isArray(value) || value.length === 0) {
@@ -322,7 +322,7 @@ RETURNS: turn summaries in ascending turn_index order. Each turn includes user p
           turn_index: tool.schema
             .number()
             .optional()
-            .describe("Target turn_index. Omit to use the newest visible turn"),
+            .describe("Target turn_index (starting from 1, not 0) for returning. Omit to automatically set the newest visible turn_index"),
           num_before: tool.schema
             .number()
             .optional()
@@ -380,7 +380,7 @@ RETURNS: messages[] plus before_message_id / after_message_id anchors for extend
           message_id: tool.schema
             .string()
             .optional()
-            .describe("Anchor message_id. Omit to use the newest visible message"),
+            .describe("Anchor message_id. Omit to automatically set the newest visible message_id"),
           num_before: tool.schema
             .number()
             .optional()
@@ -555,7 +555,7 @@ RETURNS: Matching messages grouped by relevance. Each message includes role, tur
           type: tool.schema
             .array(tool.schema.string())
             .optional()
-            .describe("Searchable content types to include. One or more of text, tool, reasoning. Default [text]"),
+            .describe("Searchable content types to include. One or more of text, tool, reasoning. Default [text, tool]"),
         },
         async execute(args, ctx) {
           return runCall(
