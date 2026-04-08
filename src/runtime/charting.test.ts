@@ -38,15 +38,6 @@ vi.mock("./runtime.ts", () => {
 
 vi.mock("../core/index.ts", () => {
   return {
-    resolveSessionTarget: vi.fn(async () => ({
-      session: {
-        id: "sess-1",
-        title: "History",
-        version: 1,
-        updatedAt: 1,
-        parentId: undefined,
-      },
-    })),
     createBrowseContext: vi.fn((_target, selfSession) => ({
       target: {
         session: {
@@ -58,6 +49,20 @@ vi.mock("../core/index.ts", () => {
         },
       },
       selfSession,
+    })),
+  };
+});
+
+vi.mock("../core/history-backend.ts", () => {
+  return {
+    resolveSessionTarget: vi.fn(async () => ({
+      session: {
+        id: "sess-1",
+        title: "History",
+        version: 1,
+        updatedAt: 1,
+        parentId: undefined,
+      },
     })),
   };
 });
@@ -74,7 +79,8 @@ vi.mock("./logger.ts", () => {
   };
 });
 
-import { createBrowseContext, resolveSessionTarget } from "../core/index.ts";
+import { createBrowseContext } from "../core/index.ts";
+import { resolveSessionTarget } from "../core/history-backend.ts";
 import { loadChartingData } from "./charting.ts";
 import { log } from "./logger.ts";
 import { browseData, loadOverviewState } from "./runtime.ts";
@@ -165,17 +171,26 @@ describe("runtime/charting", () => {
     const result = await loadChartingData(input, "sess-1", config);
 
     expect(vi.mocked(resolveSessionTarget)).toHaveBeenCalledWith(
-      input.client,
+      expect.objectContaining({
+        getSession: expect.any(Function),
+        listMessages: expect.any(Function),
+        getMessage: expect.any(Function),
+      }),
       "sess-1",
-      "/project",
     );
     expect(vi.mocked(createBrowseContext)).toHaveBeenCalledWith(
       expect.objectContaining({ session: expect.objectContaining({ id: "sess-1" }) }),
       true,
+      expect.objectContaining({
+        getSession: expect.any(Function),
+      }),
     );
     expect(vi.mocked(createBrowseContext)).toHaveBeenCalledWith(
       expect.objectContaining({ session: expect.objectContaining({ id: "sess-1" }) }),
       false,
+      expect.objectContaining({
+        getSession: expect.any(Function),
+      }),
     );
     expect(vi.mocked(log)).toHaveBeenCalledWith(input.client, "sess-1");
     expect(vi.mocked(loadOverviewState)).toHaveBeenCalledWith(

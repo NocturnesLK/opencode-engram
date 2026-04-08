@@ -156,8 +156,8 @@ function makeClient(store: {
     async ({ path, query }: { path: { id: string }; query: { limit: number; before?: string } }) => {
       const list = store.messages.get(path.id) ?? [];
       const newestFirst = [...list].sort((a, b) => {
-        const at = a.info.time.created ?? Number.NEGATIVE_INFINITY;
-        const bt = b.info.time.created ?? Number.NEGATIVE_INFINITY;
+        const at = a.info.time?.created ?? Number.NEGATIVE_INFINITY;
+        const bt = b.info.time?.created ?? Number.NEGATIVE_INFINITY;
         return bt - at;
       });
 

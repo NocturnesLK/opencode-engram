@@ -41,8 +41,9 @@ import {
   type SessionTarget,
   createBrowseContext,
   computeCacheFingerprint,
-  resolveSessionTarget,
 } from "../core/index.ts";
+import { resolveSessionTarget } from "../core/history-backend.ts";
+import type { HistoryBackend } from "../core/history-backend.ts";
 import {
   transientSearchErrorMessage,
   isToolCallLoggingEnabled,
@@ -51,11 +52,23 @@ import {
   recordToolCall,
   ensureDebugGitIgnore,
 } from "./debug.ts";
-import { type MessageBundle, type MessagePage, toNormalizedMessage, sortMessagesChronological, sortMessagesNewestFirst, getMessagePage, getMessage, getAllMessages, internalScanPageSize } from "./message-io.ts";
+import { type MessageBundle, type MessagePage, toNormalizedMessage, sortMessagesChronological, sortMessagesNewestFirst, getMessage, getAllMessages, internalScanPageSize } from "./message-io.ts";
+import { createOpenCodeBackend } from "./backends/opencode-backend.ts";
 import { getSessionFingerprint, fetchTurnItems, getTurnMapWithFallback } from "./turn-resolve.ts";
 import { type Logger, log } from "./logger.ts";
 
 const internalSearchCacheTtlMs = 60000;
+
+function getHistoryBackend(input: PluginInput, browse?: BrowseContext): HistoryBackend {
+  return browse?.backend ?? createOpenCodeBackend(input);
+}
+
+function toMessageRole(role: string): "user" | "assistant" {
+  if (role === "user" || role === "assistant") {
+    return role;
+  }
+  return "assistant";
+}
 
 export interface OverviewRequest {
   turnIndex?: number;
@@ -156,11 +169,12 @@ export async function runCall<TOutput extends object>(
       await ensureDebugGitIgnore(projectRoot);
     }
 
-    const target = await resolveSessionTarget(input.client, sessionId, input.directory);
+    const backend = createOpenCodeBackend(input);
+    const target = await resolveSessionTarget(backend, sessionId);
 
     targetSessionID = target.session.id;
     const isSelf = sessionId === ctx.sessionID;
-    const browse = createBrowseContext(target, isSelf);
+    const browse = createBrowseContext(target, isSelf, backend);
 
     journal.debug(`${tool} target resolved`, {
       targetSessionID,
@@ -288,7 +302,8 @@ export async function browseData(
 ) {
   const target = browse.target;
   const targetSession = target.session;
-  const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize);
+  const backend = getHistoryBackend(input, browse);
+  const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
   const visibleMessages = browse.selfSession
     ? filterPreCompactionMessages(allRaw)
     : allRaw;
@@ -322,7 +337,7 @@ export async function browseData(
   const { turnMap } = await getTurnMapWithCache(
     targetSession.id,
     fingerprint,
-    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage),
+    () => fetchTurnItems(input, targetSession.id, internalScanPageSize, seedPage, backend),
     computeTurns,
     journal,
   );
@@ -337,7 +352,7 @@ export async function browseData(
   }
 
   const finalTurnMap = missingIds.length > 0
-    ? await getTurnMapWithFallback(input, target, seedPage, requiredIds, journal)
+    ? await getTurnMapWithFallback(input, target, seedPage, requiredIds, journal, backend)
     : turnMap;
 
   const logger = {
@@ -491,8 +506,8 @@ function computeTurnAggregations(
 function buildTurnItems(msgs: MessageBundle[]): TurnComputeItem[] {
   return msgs.map((msg) => ({
     id: msg.info.id,
-    role: msg.info.role as "user" | "assistant",
-    time: msg.info.time.created,
+    role: toMessageRole(msg.info.role ?? "assistant"),
+    time: msg.info.time?.created,
   }));
 }
 
@@ -573,7 +588,8 @@ export async function loadOverviewState(
 ): Promise<OverviewState> {
   const target = browse.target;
   const targetSession = target.session;
-  const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize);
+  const backend = getHistoryBackend(input, browse);
+  const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
 
   const turnSourceMessages = browse.selfSession
     ? filterPreCompactionMessages(allRaw, false, false)
@@ -676,12 +692,13 @@ async function readMessageDetail(
   config: EngramConfig,
   messageID: string,
   journal: Logger,
+  backend: HistoryBackend,
 ): Promise<Record<string, unknown>> {
   const targetSession = target.session;
-  const msg = await getMessage(input, targetSession.id, messageID);
+  const msg = await getMessage(input, targetSession.id, messageID, backend);
   const normalizedMsg = toNormalizedMessage(msg.info);
   const normalizedParts = normalizeParts(msg.parts);
-  const turnMap = await getTurnMapWithFallback(input, target, undefined, [messageID], journal);
+  const turnMap = await getTurnMapWithFallback(input, target, undefined, [messageID], journal, backend);
   const turn = turnMap.get(messageID);
 
   if (turn === undefined) {
@@ -708,9 +725,10 @@ async function readPartDetail(
   config: EngramConfig,
   messageID: string,
   partID: string,
+  backend: HistoryBackend,
 ): Promise<Record<string, unknown>> {
   const targetSession = target.session;
-  const msg = await getMessage(input, targetSession.id, messageID);
+  const msg = await getMessage(input, targetSession.id, messageID, backend);
   const normalizedParts = normalizeParts(msg.parts);
   const targetPart = normalizedParts.find((p) => p.partId === partID);
 
@@ -767,11 +785,12 @@ export async function readData(
   journal: Logger,
 ): Promise<Record<string, unknown>> {
   const target = browse.target;
+  const backend = getHistoryBackend(input, browse);
   if (!partID) {
-    return readMessageDetail(input, target, config, messageID, journal);
+    return readMessageDetail(input, target, config, messageID, journal, backend);
   }
 
-  return readPartDetail(input, target, config, messageID, partID);
+  return readPartDetail(input, target, config, messageID, partID, backend);
 }
 
 function buildSearchMessageInputs(
@@ -792,8 +811,8 @@ function buildSearchMessageInputs(
 
     return {
       id: msg.info.id,
-      role: msg.info.role as "user" | "assistant",
-      time: msg.info.time.created,
+      role: toMessageRole(msg.info.role ?? "assistant"),
+      time: msg.info.time?.created,
       parts: normalizeParts(msg.parts),
       turn,
     };
@@ -804,7 +823,7 @@ function collectToolNames(msgs: MessageBundle[]): string[] {
   const toolNames: string[] = [];
   for (const msg of msgs) {
     for (const part of msg.parts) {
-      if (part.type !== "tool") {
+      if (part.type !== "tool" || !("tool" in part)) {
         continue;
       }
       toolNames.push(part.tool);
@@ -819,6 +838,7 @@ async function getOrBuildSearchCache(
   selfSession: boolean,
   config: EngramConfig,
   journal: Logger,
+  backend: HistoryBackend,
 ): Promise<SearchCacheEntry> {
   const targetSession = target.session;
   const fingerprint = getSessionCacheFingerprint(targetSession);
@@ -853,13 +873,13 @@ async function getOrBuildSearchCache(
   });
 
   const buildPromise = (async (): Promise<SearchCacheEntry> => {
-    const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize);
+    const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
     const allMessages = selfSession ? filterPreCompactionMessages(allRaw) : allRaw;
     const sortedMessages = sortMessagesChronological(allMessages);
     const turnItems: TurnComputeItem[] = sortedMessages.map((msg) => ({
       id: msg.info.id,
-      role: msg.info.role as "user" | "assistant",
-      time: msg.info.time.created,
+      role: toMessageRole(msg.info.role ?? "assistant"),
+      time: msg.info.time?.created,
     }));
     const turnMap = computeTurns(turnItems);
     const logger = {
@@ -900,6 +920,7 @@ export async function searchData(
   journal: Logger,
 ): Promise<SearchOutput> {
   const target = browse.target;
+  const backend = getHistoryBackend(input, browse);
 
   const toError = (error: unknown): Error => {
     if (error instanceof Error) {
@@ -915,7 +936,7 @@ export async function searchData(
 
   let cache: SearchCacheEntry;
   try {
-    cache = await getOrBuildSearchCache(input, target, browse.selfSession, config, journal);
+    cache = await getOrBuildSearchCache(input, target, browse.selfSession, config, journal, backend);
   } catch (error) {
     if (isKnownTransientSearchError(error)) {
       throw new Error(transientSearchErrorMessage);

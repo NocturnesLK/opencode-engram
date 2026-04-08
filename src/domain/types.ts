@@ -11,11 +11,138 @@
 
 export type MessageRole = "user" | "assistant";
 
+export type HistoryRole = MessageRole | string;
+
 export type ToolStatus = "pending" | "running" | "completed" | "error";
 
 export type ToolOutcome = "completed" | "recovered" | "error" | "running";
 
 export type ReadablePartType = "text" | "reasoning" | "tool";
+
+// =============================================================================
+// History Backend Raw Types
+// =============================================================================
+
+export interface HistoryMessage {
+  id: string;
+  role?: HistoryRole;
+  time?: {
+    created?: number;
+  };
+  summary?: unknown;
+}
+
+export interface HistoryFileSource {
+  path: string;
+}
+
+export interface HistoryFilePart {
+  type: "file";
+  id: string;
+  messageID: string;
+  mime: string;
+  source?: HistoryFileSource;
+  filename?: string;
+  url?: string;
+}
+
+export interface HistoryToolStatePending {
+  status: "pending";
+  input: Record<string, unknown>;
+}
+
+export interface HistoryToolStateRunning {
+  status: "running";
+  title?: string;
+  input: Record<string, unknown>;
+}
+
+export interface HistoryToolStateCompleted {
+  status: "completed";
+  title: string;
+  input: Record<string, unknown>;
+  output: string;
+  attachments?: HistoryFilePart[];
+}
+
+export interface HistoryToolStateError {
+  status: "error";
+  input: Record<string, unknown>;
+  error: string;
+}
+
+export interface HistoryToolStateUnknown {
+  status: string;
+  title?: string;
+  input?: Record<string, unknown>;
+  output?: string;
+  error?: string;
+  attachments?: HistoryFilePart[];
+}
+
+export type HistoryToolState =
+  | HistoryToolStatePending
+  | HistoryToolStateRunning
+  | HistoryToolStateCompleted
+  | HistoryToolStateError
+  | HistoryToolStateUnknown;
+
+export interface HistoryTextPart {
+  type: "text";
+  id: string;
+  messageID: string;
+  text: string;
+  ignored?: boolean;
+}
+
+export interface HistoryReasoningPart {
+  type: "reasoning";
+  id: string;
+  messageID: string;
+  text: string;
+}
+
+export interface HistoryToolPart {
+  type: "tool";
+  id: string;
+  messageID: string;
+  tool: string;
+  state: HistoryToolState;
+}
+
+export interface HistoryCompactionPart {
+  type: "compaction";
+  id: string;
+  messageID: string;
+  auto?: boolean;
+}
+
+export interface HistorySubtaskPart {
+  type: "subtask";
+  id: string;
+  messageID: string;
+}
+
+export interface HistoryUnknownPart {
+  type: string;
+  id: string;
+  messageID: string;
+  originalType?: string;
+}
+
+export type HistoryPart =
+  | HistoryTextPart
+  | HistoryReasoningPart
+  | HistoryToolPart
+  | HistoryFilePart
+  | HistoryCompactionPart
+  | HistorySubtaskPart
+  | HistoryUnknownPart;
+
+export interface HistoryMessageBundle {
+  info: HistoryMessage;
+  parts: HistoryPart[];
+}
 
 // =============================================================================
 // Normalized Message (Adapter Output -> Domain Input)

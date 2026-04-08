@@ -1,3 +1,5 @@
+import type { HistoryBackend } from "./history-backend.ts";
+
 /**
  * session.ts - Core Session Models and Utilities
  *
@@ -8,7 +10,7 @@
  * - SessionTarget: the resolved target session for reading
  * - BrowseContext: unified context for all core reading operations
  * - SessionMetadata: minimal metadata needed for reading
- * - SdkSessionData: shape of SDK session data for conversion
+ * - HistorySessionData: backend session shape for conversion
  */
 
 // =============================================================================
@@ -55,7 +57,7 @@ export interface SessionTarget {
  * The context intentionally does NOT include:
  * - Tool-specific argument validation (interface layer responsibility)
  * - Public output field filtering (serialize layer responsibility)
- * - SDK client references (passed separately to avoid coupling)
+ * - SDK client references (use HistoryBackend instead)
  */
 export interface BrowseContext {
   /**
@@ -71,6 +73,11 @@ export interface BrowseContext {
    * without adding new parameters.
    */
   selfSession: boolean;
+
+  /**
+   * History backend used by runtime read paths.
+   */
+  backend?: HistoryBackend;
 }
 
 /**
@@ -82,24 +89,30 @@ export interface BrowseContext {
 export function createBrowseContext(
   target: SessionTarget,
   selfSession: boolean = false,
+  backend?: HistoryBackend,
 ): BrowseContext {
-  return {
+  const context: BrowseContext = {
     target,
     selfSession,
   };
+
+  if (backend !== undefined) {
+    context.backend = backend;
+  }
+
+  return context;
 }
 
 // =============================================================================
-// SDK Session Adapter
+// History Session Adapter
 // =============================================================================
 
 /**
- * SDK session data shape.
+ * Backend session data shape.
  *
- * Captures the shape of session data returned by the SDK,
- * allowing conversion to core SessionMetadata.
+ * Keeps the currently used OpenCode session subset while remaining backend-neutral.
  */
-export interface SdkSessionData {
+export interface HistorySessionData {
   id: string;
   title: string;
   version?: number | string;
@@ -109,12 +122,17 @@ export interface SdkSessionData {
   parentID?: string;
 }
 
+/**
+ * Backward-compatible alias for tests and existing call sites.
+ */
+export type SdkSessionData = HistorySessionData;
+
 // =============================================================================
 // Session Metadata Normalization
 // =============================================================================
 
 /**
- * Normalize a flexible numeric value from SDK/session layer.
+ * Normalize a flexible numeric value from backend/session layer.
  */
 function normalizeVersion(value: number | string | undefined): number | undefined {
   if (value === undefined) {
@@ -128,7 +146,7 @@ function normalizeVersion(value: number | string | undefined): number | undefine
 }
 
 /**
- * Normalize a flexible timestamp value from SDK/session layer.
+ * Normalize a flexible timestamp value from backend/session layer.
  */
 function normalizeUpdatedAt(
   value: number | string | undefined,
@@ -144,9 +162,9 @@ function normalizeUpdatedAt(
 }
 
 /**
- * Convert SDK session data to core SessionMetadata.
+ * Convert backend session data to core SessionMetadata.
  */
-export function normalizeSessionMetadata(session: SdkSessionData): SessionMetadata {
+export function normalizeSessionMetadata(session: HistorySessionData): SessionMetadata {
   return {
     id: session.id,
     title: session.title,
@@ -161,17 +179,17 @@ export function normalizeSessionMetadata(session: SdkSessionData): SessionMetada
 // =============================================================================
 
 /**
- * Convert SDK session data to core SessionMetadata.
+ * Convert backend session data to core SessionMetadata.
  */
-export function toSessionMetadata(sdk: SdkSessionData): SessionMetadata {
+export function toSessionMetadata(sdk: HistorySessionData): SessionMetadata {
   return normalizeSessionMetadata(sdk);
 }
 
 /**
- * Create a SessionTarget from SDK session data.
+ * Create a SessionTarget from backend session data.
  */
 export function createSessionTarget(
-  sdk: SdkSessionData,
+  sdk: HistorySessionData,
 ): SessionTarget {
   return {
     session: toSessionMetadata(sdk),

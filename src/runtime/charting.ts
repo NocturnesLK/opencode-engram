@@ -2,7 +2,9 @@ import type { PluginInput } from "../common/common.ts";
 import type { EngramConfig } from "../common/config.ts";
 import type { BrowseOutput, OverviewOutput } from "../domain/types.ts";
 
-import { createBrowseContext, resolveSessionTarget } from "../core/index.ts";
+import { createBrowseContext } from "../core/index.ts";
+import { resolveSessionTarget } from "../core/history-backend.ts";
+import { createOpenCodeBackend } from "./backends/opencode-backend.ts";
 import { log } from "./logger.ts";
 import { browseData, loadOverviewState } from "./runtime.ts";
 
@@ -36,8 +38,9 @@ export async function loadChartingData(
   config: EngramConfig,
 ): Promise<ChartingData> {
   const journal = log(input.client, sessionID);
-  const target = await resolveSessionTarget(input.client, sessionID, input.directory);
-  const overviewBrowse = createBrowseContext(target, true);
+  const backend = createOpenCodeBackend(input);
+  const target = await resolveSessionTarget(backend, sessionID);
+  const overviewBrowse = createBrowseContext(target, true, backend);
   const overviewState = await loadOverviewState(input, overviewBrowse, config, journal);
   const latestTurn = overviewState.turns.at(-1);
   const minTurn = latestTurn
@@ -60,7 +63,7 @@ export async function loadChartingData(
     overview,
     latestTurnDetail: await browseData(
       input,
-      createBrowseContext(target, false),
+      createBrowseContext(target, false, backend),
       config,
       journal,
       {

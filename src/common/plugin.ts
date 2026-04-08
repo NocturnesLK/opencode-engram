@@ -7,6 +7,7 @@ import {
   invalid,
   type PluginInput,
 } from "./common.ts";
+import { createOpenCodeBackend } from "../runtime/backends/opencode-backend.ts";
 import {
   loadEngramConfig,
 } from "./config.ts";
@@ -192,25 +193,14 @@ async function isCompactionTextCompletion(
   messageID: string,
   partID: string,
 ) {
-  const result = await input.client.session.message({
-    path: {
-      id: sessionID,
-      messageID,
-    },
-    throwOnError: false,
-  });
-
-  const status = result.response?.status ?? 0;
-  if (result.error || status >= 400 || !result.data) {
-    throw new Error("Failed to read message. This may be a temporary issue — try again.");
-  }
-
-  const targetPart = result.data.parts.find((part) => part.id === partID);
+  const backend = createOpenCodeBackend(input);
+  const message = await backend.getMessage(sessionID, messageID);
+  const targetPart = message.parts.find((part) => part.id === partID);
   if (!targetPart || targetPart.type !== "text") {
     return false;
   }
 
-  return result.data.info.role === "assistant" && result.data.info.summary === true;
+  return message.info.role === "assistant" && message.info.summary === true;
 }
 
 export const EngramPlugin: Plugin = async (input) => {

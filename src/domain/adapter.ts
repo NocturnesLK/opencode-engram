@@ -1,66 +1,56 @@
 /**
- * adapter.ts - SDK Adaptation Layer
+ * adapter.ts - History Part Adaptation Layer
  *
- * This module handles the conversion from SDK types to normalized domain types.
- * It extracts facts from SDK structures without deciding presentation logic.
- *
- * Responsibilities:
- * - Type guards for SDK Part union
- * - ToolState status branch extraction
- * - Tool attachments extraction for completed tool states
- * - File path extraction from various source types
- * - SDK Part -> NormalizedPart conversion
+ * This module handles the conversion from backend-neutral history part types
+ * to normalized domain types. It extracts facts without deciding presentation logic.
  */
 
 import type {
-  Part,
-  TextPart,
-  ReasoningPart,
-  ToolPart,
-  FilePart,
-  ToolState,
-  ToolStatePending,
-  ToolStateRunning,
-  ToolStateCompleted,
-  ToolStateError,
-} from "@opencode-ai/sdk";
-
-import type {
-  ToolStatus,
-  NormalizedPart,
-  NormalizedTextPart,
-  NormalizedReasoningPart,
-  NormalizedToolPart,
-  NormalizedImagePart,
+  HistoryFilePart,
+  HistoryPart,
+  HistoryReasoningPart,
+  HistoryTextPart,
+  HistoryToolPart,
+  HistoryToolState,
+  HistoryToolStateCompleted,
+  HistoryToolStateError,
+  HistoryToolStatePending,
+  HistoryToolStateRunning,
   NormalizedFilePart,
+  NormalizedImagePart,
+  NormalizedPart,
+  NormalizedReasoningPart,
+  NormalizedTextPart,
+  NormalizedToolPart,
   PreviewFallbackHints,
+  ToolStatus,
 } from "./types.ts";
 
 // =============================================================================
 // Type Guards
 // =============================================================================
 
-export function isTextPart(part: Part): part is TextPart {
+export function isTextPart(part: HistoryPart): part is HistoryTextPart {
   return part.type === "text";
 }
 
-export function isReasoningPart(part: Part): part is ReasoningPart {
+export function isReasoningPart(part: HistoryPart): part is HistoryReasoningPart {
   return part.type === "reasoning";
 }
 
-export function isToolPart(part: Part): part is ToolPart {
+export function isToolPart(part: HistoryPart): part is HistoryToolPart {
   return part.type === "tool";
 }
 
-export function isFilePart(part: Part): part is FilePart {
+export function isFilePart(part: HistoryPart): part is HistoryFilePart {
   return part.type === "file";
 }
 
 /**
  * Check if a file part represents an image based on MIME type.
  */
-export function isImageFilePart(part: Part): part is FilePart {
-  return part.type === "file" && part.mime.startsWith("image/");
+export function isImageFilePart(part: HistoryPart): part is HistoryFilePart {
+  return isFilePart(part) && part.mime.startsWith("image/");
 }
 
 // =============================================================================
@@ -74,32 +64,26 @@ export interface ToolStateExtract {
   content: string | undefined;
 }
 
-function isPending(state: ToolState): state is ToolStatePending {
+function isPending(state: HistoryToolState): state is HistoryToolStatePending {
   return state.status === "pending";
 }
 
-function isRunning(state: ToolState): state is ToolStateRunning {
+function isRunning(state: HistoryToolState): state is HistoryToolStateRunning {
   return state.status === "running";
 }
 
-function isCompleted(state: ToolState): state is ToolStateCompleted {
+function isCompleted(state: HistoryToolState): state is HistoryToolStateCompleted {
   return state.status === "completed";
 }
 
-function isError(state: ToolState): state is ToolStateError {
+function isError(state: HistoryToolState): state is HistoryToolStateError {
   return state.status === "error";
 }
 
 /**
- * Extract normalized state information from a ToolPart's state.
- *
- * SDK ToolState branches:
- * - pending: no title, no content
- * - running: optional title, no content
- * - completed: required title, output as content
- * - error: no title, error as content
+ * Extract normalized state information from a tool part state.
  */
-export function extractToolState(part: ToolPart): ToolStateExtract {
+export function extractToolState(part: HistoryToolPart): ToolStateExtract {
   const state = part.state;
 
   if (isCompleted(state)) {
@@ -129,7 +113,6 @@ export function extractToolState(part: ToolPart): ToolStateExtract {
     };
   }
 
-  // pending state
   if (isPending(state)) {
     return {
       status: "pending",
@@ -151,17 +134,10 @@ export function extractToolState(part: ToolPart): ToolStateExtract {
 // =============================================================================
 
 /**
- * Extract the display path from a FilePart.
- *
- * Priority:
- * 1. source.path (for file/symbol sources)
- * 2. filename property
- * 3. normalized url path
- * 4. "unknown-file" fallback
+ * Extract the display path from a file part.
  */
-export function extractFilePath(part: FilePart): string {
+export function extractFilePath(part: HistoryFilePart): string {
   if (part.source) {
-    // Both FileSource and SymbolSource have a `path` property
     return part.source.path;
   }
 
@@ -203,7 +179,7 @@ function normalizeUrlPath(value: string): string {
 // Part Normalization
 // =============================================================================
 
-function normalizeTextPart(part: TextPart): NormalizedTextPart {
+function normalizeTextPart(part: HistoryTextPart): NormalizedTextPart {
   return {
     type: "text",
     partId: part.id,
@@ -213,7 +189,7 @@ function normalizeTextPart(part: TextPart): NormalizedTextPart {
   };
 }
 
-function normalizeReasoningPart(part: ReasoningPart): NormalizedReasoningPart {
+function normalizeReasoningPart(part: HistoryReasoningPart): NormalizedReasoningPart {
   return {
     type: "reasoning",
     partId: part.id,
@@ -222,7 +198,7 @@ function normalizeReasoningPart(part: ReasoningPart): NormalizedReasoningPart {
   };
 }
 
-function normalizeToolPart(part: ToolPart): NormalizedToolPart {
+function normalizeToolPart(part: HistoryToolPart): NormalizedToolPart {
   const extract = extractToolState(part);
   return {
     type: "tool",
@@ -246,8 +222,8 @@ function toolAttachmentPartId(
 }
 
 function normalizeToolAttachment(
-  toolPart: ToolPart,
-  attachment: FilePart,
+  toolPart: HistoryToolPart,
+  attachment: HistoryFilePart,
   index: number,
 ): NormalizedImagePart | NormalizedFilePart {
   const partId = toolAttachmentPartId(toolPart.id, attachment.id, index);
@@ -269,7 +245,7 @@ function normalizeToolAttachment(
   };
 }
 
-function normalizeToolAttachments(part: ToolPart): Array<NormalizedImagePart | NormalizedFilePart> {
+function normalizeToolAttachments(part: HistoryToolPart): Array<NormalizedImagePart | NormalizedFilePart> {
   const state = part.state;
   if (!isCompleted(state) || !state.attachments || state.attachments.length === 0) {
     return [];
@@ -280,7 +256,7 @@ function normalizeToolAttachments(part: ToolPart): Array<NormalizedImagePart | N
   );
 }
 
-function normalizeImagePart(part: FilePart): NormalizedImagePart {
+function normalizeImagePart(part: HistoryFilePart): NormalizedImagePart {
   return {
     type: "image",
     partId: part.id,
@@ -289,7 +265,7 @@ function normalizeImagePart(part: FilePart): NormalizedImagePart {
   };
 }
 
-function normalizeFilePart(part: FilePart): NormalizedFilePart {
+function normalizeFilePart(part: HistoryFilePart): NormalizedFilePart {
   return {
     type: "file",
     partId: part.id,
@@ -300,12 +276,11 @@ function normalizeFilePart(part: FilePart): NormalizedFilePart {
 }
 
 /**
- * Convert an SDK Part to a NormalizedPart.
+ * Convert a raw history part to a NormalizedPart.
  *
- * Returns null for part types that should not be included in output
- * (e.g., step-start, step-finish, snapshot, patch, agent, subtask, retry, other internal parts).
+ * Returns null for part types that should not be included in output.
  */
-export function normalizePart(part: Part): NormalizedPart | null {
+export function normalizePart(part: HistoryPart): NormalizedPart | null {
   if (isTextPart(part)) {
     return normalizeTextPart(part);
   }
@@ -319,21 +294,19 @@ export function normalizePart(part: Part): NormalizedPart | null {
   }
 
   if (isFilePart(part)) {
-    // Distinguish image files from other files
     if (isImageFilePart(part)) {
       return normalizeImagePart(part);
     }
     return normalizeFilePart(part);
   }
 
-  // Ignore other unsupported internal part types.
   return null;
 }
 
 /**
  * Normalize all parts from a message, filtering out unsupported types.
  */
-export function normalizeParts(parts: Part[]): NormalizedPart[] {
+export function normalizeParts(parts: HistoryPart[]): NormalizedPart[] {
   const result: NormalizedPart[] = [];
   for (const part of parts) {
     if (isToolPart(part)) {
@@ -353,7 +326,7 @@ export function normalizeParts(parts: Part[]): NormalizedPart[] {
 /**
  * Summarize raw part kinds that may need semantic preview fallbacks.
  */
-export function summarizePreviewFallbackHints(parts: Part[]): PreviewFallbackHints {
+export function summarizePreviewFallbackHints(parts: HistoryPart[]): PreviewFallbackHints {
   const hints: PreviewFallbackHints = {
     hasCompaction: false,
     hasSubtask: false,

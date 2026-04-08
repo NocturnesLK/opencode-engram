@@ -16,6 +16,7 @@ export type {
   SessionMetadata,
   SessionTarget,
   BrowseContext,
+  HistorySessionData,
   SdkSessionData,
 } from "./session.ts";
 export {
@@ -31,3 +32,13 @@ export {
   getParentSessionId,
   resolveSessionTarget,
 } from "./sdk-bridge.ts";
+
+// History backend contract
+export type {
+  HistoryBackend,
+  HistoryMessagePage,
+} from "./history-backend.ts";
+export {
+  getParentSessionId as getBackendParentSessionId,
+  resolveSessionTarget as resolveBackendSessionTarget,
+} from "./history-backend.ts";
