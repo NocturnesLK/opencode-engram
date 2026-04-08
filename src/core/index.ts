@@ -27,18 +27,12 @@ export {
   computeCacheFingerprint,
 } from "./session.ts";
 
-// SDK bridges for session resolution
-export {
-  getParentSessionId,
-  resolveSessionTarget,
-} from "./sdk-bridge.ts";
-
 // History backend contract
 export type {
   HistoryBackend,
   HistoryMessagePage,
 } from "./history-backend.ts";
 export {
-  getParentSessionId as getBackendParentSessionId,
-  resolveSessionTarget as resolveBackendSessionTarget,
+  getParentSessionId,
+  resolveSessionTarget,
 } from "./history-backend.ts";

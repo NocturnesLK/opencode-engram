@@ -6,6 +6,12 @@ vi.mock("./message-io.ts", () => {
   return {
     getAllMessages: vi.fn(),
     internalScanPageSize: 100,
+    requireMessageRole: vi.fn((role: string | undefined) => {
+      if (role === "user" || role === "assistant") {
+        return role;
+      }
+      throw new Error(`Unsupported message role '${role ?? "undefined"}'`);
+    }),
   };
 });
 

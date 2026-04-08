@@ -50,11 +50,6 @@ vi.mock("../core/index.ts", () => {
       },
       selfSession,
     })),
-  };
-});
-
-vi.mock("../core/history-backend.ts", () => {
-  return {
     resolveSessionTarget: vi.fn(async () => ({
       session: {
         id: "sess-1",
@@ -80,7 +75,7 @@ vi.mock("./logger.ts", () => {
 });
 
 import { createBrowseContext } from "../core/index.ts";
-import { resolveSessionTarget } from "../core/history-backend.ts";
+import { resolveSessionTarget } from "../core/index.ts";
 import { loadChartingData } from "./charting.ts";
 import { log } from "./logger.ts";
 import { browseData, loadOverviewState } from "./runtime.ts";

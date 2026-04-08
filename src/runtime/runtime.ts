@@ -38,12 +38,12 @@ import {
 import type { BrowseItemOutput, SectionConvertContext, NormalizedToolPart, OverviewOutput, OverviewTurnOutput, OverviewAssistantOutput, SearchOutput } from "../domain/types.ts";
 import {
   type BrowseContext,
+  type HistoryBackend,
   type SessionTarget,
   createBrowseContext,
   computeCacheFingerprint,
+  resolveSessionTarget,
 } from "../core/index.ts";
-import { resolveSessionTarget } from "../core/history-backend.ts";
-import type { HistoryBackend } from "../core/history-backend.ts";
 import {
   transientSearchErrorMessage,
   isToolCallLoggingEnabled,
@@ -52,23 +52,12 @@ import {
   recordToolCall,
   ensureDebugGitIgnore,
 } from "./debug.ts";
-import { type MessageBundle, type MessagePage, toNormalizedMessage, sortMessagesChronological, sortMessagesNewestFirst, getMessage, getAllMessages, internalScanPageSize } from "./message-io.ts";
-import { createOpenCodeBackend } from "./backends/opencode-backend.ts";
+import { type MessageBundle, type MessagePage, toNormalizedMessage, sortMessagesChronological, sortMessagesNewestFirst, getMessage, getAllMessages, internalScanPageSize, requireMessageRole } from "./message-io.ts";
+import { createHistoryBackend, resolveHistoryBackend } from "./backends/index.ts";
 import { getSessionFingerprint, fetchTurnItems, getTurnMapWithFallback } from "./turn-resolve.ts";
 import { type Logger, log } from "./logger.ts";
 
 const internalSearchCacheTtlMs = 60000;
-
-function getHistoryBackend(input: PluginInput, browse?: BrowseContext): HistoryBackend {
-  return browse?.backend ?? createOpenCodeBackend(input);
-}
-
-function toMessageRole(role: string): "user" | "assistant" {
-  if (role === "user" || role === "assistant") {
-    return role;
-  }
-  return "assistant";
-}
 
 export interface OverviewRequest {
   turnIndex?: number;
@@ -169,7 +158,7 @@ export async function runCall<TOutput extends object>(
       await ensureDebugGitIgnore(projectRoot);
     }
 
-    const backend = createOpenCodeBackend(input);
+    const backend = createHistoryBackend(input);
     const target = await resolveSessionTarget(backend, sessionId);
 
     targetSessionID = target.session.id;
@@ -302,7 +291,7 @@ export async function browseData(
 ) {
   const target = browse.target;
   const targetSession = target.session;
-  const backend = getHistoryBackend(input, browse);
+  const backend = resolveHistoryBackend(input, browse.backend);
   const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
   const visibleMessages = browse.selfSession
     ? filterPreCompactionMessages(allRaw)
@@ -506,7 +495,7 @@ function computeTurnAggregations(
 function buildTurnItems(msgs: MessageBundle[]): TurnComputeItem[] {
   return msgs.map((msg) => ({
     id: msg.info.id,
-    role: toMessageRole(msg.info.role ?? "assistant"),
+    role: requireMessageRole(msg.info.role),
     time: msg.info.time?.created,
   }));
 }
@@ -588,7 +577,7 @@ export async function loadOverviewState(
 ): Promise<OverviewState> {
   const target = browse.target;
   const targetSession = target.session;
-  const backend = getHistoryBackend(input, browse);
+  const backend = resolveHistoryBackend(input, browse.backend);
   const allRaw = await getAllMessages(input, targetSession.id, internalScanPageSize, undefined, backend);
 
   const turnSourceMessages = browse.selfSession
@@ -785,7 +774,7 @@ export async function readData(
   journal: Logger,
 ): Promise<Record<string, unknown>> {
   const target = browse.target;
-  const backend = getHistoryBackend(input, browse);
+  const backend = resolveHistoryBackend(input, browse.backend);
   if (!partID) {
     return readMessageDetail(input, target, config, messageID, journal, backend);
   }
@@ -811,7 +800,7 @@ function buildSearchMessageInputs(
 
     return {
       id: msg.info.id,
-      role: toMessageRole(msg.info.role ?? "assistant"),
+      role: requireMessageRole(msg.info.role),
       time: msg.info.time?.created,
       parts: normalizeParts(msg.parts),
       turn,
@@ -878,7 +867,7 @@ async function getOrBuildSearchCache(
     const sortedMessages = sortMessagesChronological(allMessages);
     const turnItems: TurnComputeItem[] = sortedMessages.map((msg) => ({
       id: msg.info.id,
-      role: toMessageRole(msg.info.role ?? "assistant"),
+      role: requireMessageRole(msg.info.role),
       time: msg.info.time?.created,
     }));
     const turnMap = computeTurns(turnItems);
@@ -920,7 +909,7 @@ export async function searchData(
   journal: Logger,
 ): Promise<SearchOutput> {
   const target = browse.target;
-  const backend = getHistoryBackend(input, browse);
+  const backend = resolveHistoryBackend(input, browse.backend);
 
   const toError = (error: unknown): Error => {
     if (error instanceof Error) {

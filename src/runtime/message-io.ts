@@ -7,7 +7,7 @@ import type {
   NormalizedMessage,
 } from "../domain/types.ts";
 
-import { createOpenCodeBackend } from "./backends/opencode-backend.ts";
+import { resolveHistoryBackend } from "./backends/index.ts";
 
 export const defaultCount = 20;
 export const internalScanPageSize = 100;
@@ -25,24 +25,25 @@ export type MessagePage = {
   next_cursor: string | undefined;
 };
 
-function getMessageBackend(input: PluginInput, backend?: HistoryBackend): HistoryBackend {
-  return backend ?? createOpenCodeBackend(input);
+function describeUnsupportedRole(value: string | undefined): string {
+  return value === undefined ? "undefined" : value;
 }
 
-function isMessageRole(value: string): value is MessageRole {
-  return value === "user" || value === "assistant";
-}
-
-function normalizeHistoryRole(value: string | undefined): MessageRole {
+export function requireMessageRole(value: string | undefined): MessageRole {
   if (value === "user" || value === "assistant") {
     return value;
   }
-  return "assistant";
+  throw new Error(`Unsupported message role '${describeUnsupportedRole(value)}'`);
+}
+
+function requireMessageBundleRole(bundle: MessageBundle): MessageBundle {
+  requireMessageRole(bundle.info.role);
+  return bundle;
 }
 
 function toMessagePage(page: HistoryMessagePage): MessagePage {
   return {
-    msgs: page.msgs,
+    msgs: page.msgs.map(requireMessageBundleRole),
     next_cursor: page.nextCursor,
   };
 }
@@ -67,7 +68,7 @@ export function messageLimit(count: number | undefined, maxMessages: number) {
 export function toNormalizedMessage(msg: HistoryMessage): NormalizedMessage {
   return {
     id: msg.id,
-    role: normalizeHistoryRole(msg.role),
+    role: requireMessageRole(msg.role),
     time: msg.time?.created,
     summary: msg.summary === true,
   };
@@ -129,7 +130,7 @@ export async function getMessagePage(
   cursor?: string,
   backend?: HistoryBackend,
 ) {
-  const page = await getMessageBackend(input, backend).listMessages(sessionID, {
+  const page = await resolveHistoryBackend(input, backend).listMessages(sessionID, {
     limit,
     before: cursor,
   });
@@ -142,7 +143,7 @@ export async function getMessage(
   messageID: string,
   backend?: HistoryBackend,
 ) {
-  return getMessageBackend(input, backend).getMessage(sessionID, messageID);
+  return requireMessageBundleRole(await resolveHistoryBackend(input, backend).getMessage(sessionID, messageID));
 }
 
 /**
@@ -161,7 +162,7 @@ export async function getAllMessages(
   let cursor: string | undefined;
 
   if (seedPage) {
-    messages.push(...seedPage.msgs);
+    messages.push(...seedPage.msgs.map(requireMessageBundleRole));
     cursor = seedPage.next_cursor;
     if (!cursor) {
       return messages;

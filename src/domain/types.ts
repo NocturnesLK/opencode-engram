@@ -11,8 +11,6 @@
 
 export type MessageRole = "user" | "assistant";
 
-export type HistoryRole = MessageRole | string;
-
 export type ToolStatus = "pending" | "running" | "completed" | "error";
 
 export type ToolOutcome = "completed" | "recovered" | "error" | "running";
@@ -25,7 +23,7 @@ export type ReadablePartType = "text" | "reasoning" | "tool";
 
 export interface HistoryMessage {
   id: string;
-  role?: HistoryRole;
+  role: MessageRole;
   time?: {
     created?: number;
   };
@@ -71,21 +69,11 @@ export interface HistoryToolStateError {
   error: string;
 }
 
-export interface HistoryToolStateUnknown {
-  status: string;
-  title?: string;
-  input?: Record<string, unknown>;
-  output?: string;
-  error?: string;
-  attachments?: HistoryFilePart[];
-}
-
 export type HistoryToolState =
   | HistoryToolStatePending
   | HistoryToolStateRunning
   | HistoryToolStateCompleted
-  | HistoryToolStateError
-  | HistoryToolStateUnknown;
+  | HistoryToolStateError;
 
 export interface HistoryTextPart {
   type: "text";

@@ -7,7 +7,7 @@ import {
   invalid,
   type PluginInput,
 } from "./common.ts";
-import { createOpenCodeBackend } from "../runtime/backends/opencode-backend.ts";
+import { createHistoryBackend } from "../runtime/backends/index.ts";
 import {
   loadEngramConfig,
 } from "./config.ts";
@@ -193,7 +193,7 @@ async function isCompactionTextCompletion(
   messageID: string,
   partID: string,
 ) {
-  const backend = createOpenCodeBackend(input);
+  const backend = createHistoryBackend(input);
   const message = await backend.getMessage(sessionID, messageID);
   const targetPart = message.parts.find((part) => part.id === partID);
   if (!targetPart || targetPart.type !== "text") {

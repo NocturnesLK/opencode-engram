@@ -26,6 +26,10 @@ import type {
 import type { HistoryBackend, HistoryMessagePage } from "../../core/history-backend.ts";
 import type { HistorySessionData } from "../../core/session.ts";
 
+function describeUnsupportedValue(value: unknown): string {
+  return value === undefined ? "undefined" : String(value);
+}
+
 function toQuery(directory?: string): { directory: string } | undefined {
   if (!directory?.trim()) {
     return undefined;
@@ -33,14 +37,19 @@ function toQuery(directory?: string): { directory: string } | undefined {
   return { directory };
 }
 
+function toHistoryMessageRole(role: unknown): HistoryMessage["role"] {
+  if (role === "user" || role === "assistant") {
+    return role;
+  }
+  throw new Error(`Unsupported message role '${describeUnsupportedValue(role)}'`);
+}
+
 function toHistoryMessage(message: Message): HistoryMessage {
   const result: HistoryMessage = {
     id: message.id,
+    role: toHistoryMessageRole(message.role),
   };
 
-  if (message.role !== undefined) {
-    result.role = message.role;
-  }
   if (message.time?.created !== undefined) {
     result.time = {
       created: message.time.created,
@@ -100,15 +109,9 @@ function toHistoryToolState(state: ToolState): HistoryToolState {
         error: error.error,
       };
     }
-    default:
-      return {
-        status: String((state as { status?: unknown }).status ?? "unknown"),
-        title: (state as { title?: string }).title,
-        input: (state as { input?: Record<string, unknown> }).input,
-        output: (state as { output?: string }).output,
-        error: (state as { error?: string }).error,
-        attachments: (state as { attachments?: FilePart[] }).attachments?.map(toHistoryFilePart),
-      };
+    default: {
+      throw new Error(`Unsupported tool state '${describeUnsupportedValue((state as { status?: unknown }).status)}'`);
+    }
   }
 }
 

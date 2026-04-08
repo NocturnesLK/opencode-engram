@@ -2,9 +2,8 @@ import type { PluginInput } from "../common/common.ts";
 import type { EngramConfig } from "../common/config.ts";
 import type { BrowseOutput, OverviewOutput } from "../domain/types.ts";
 
-import { createBrowseContext } from "../core/index.ts";
-import { resolveSessionTarget } from "../core/history-backend.ts";
-import { createOpenCodeBackend } from "./backends/opencode-backend.ts";
+import { createBrowseContext, resolveSessionTarget } from "../core/index.ts";
+import { createHistoryBackend } from "./backends/index.ts";
 import { log } from "./logger.ts";
 import { browseData, loadOverviewState } from "./runtime.ts";
 
@@ -38,7 +37,7 @@ export async function loadChartingData(
   config: EngramConfig,
 ): Promise<ChartingData> {
   const journal = log(input.client, sessionID);
-  const backend = createOpenCodeBackend(input);
+  const backend = createHistoryBackend(input);
   const target = await resolveSessionTarget(backend, sessionID);
   const overviewBrowse = createBrowseContext(target, true, backend);
   const overviewState = await loadOverviewState(input, overviewBrowse, config, journal);

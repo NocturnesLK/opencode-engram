@@ -6,6 +6,7 @@ import {
   getMessagePage,
   messageLimit,
   normalizeCursor,
+  requireMessageRole,
   sortMessagesChronological,
   sortMessagesNewestFirst,
   toNormalizedMessage,
@@ -89,6 +90,13 @@ describe("message-io/toNormalizedMessage", () => {
       summary: true,
     });
   });
+
+  test("throws on unsupported role", () => {
+    expect(() => requireMessageRole("system")).toThrow("Unsupported message role 'system'");
+    expect(() => toNormalizedMessage({ id: "m", role: "system" } as unknown as import("@opencode-ai/sdk").Message)).toThrow(
+      "Unsupported message role 'system'",
+    );
+  });
 });
 
 describe("message-io/sortMessagesChronological", () => {
@@ -122,7 +130,7 @@ describe("message-io/sortMessagesNewestFirst", () => {
 describe("message-io/getMessagePage", () => {
   test("normalizes empty next cursor and forwards before cursor", async () => {
     const sessionMessages = vi.fn(async (input: unknown) => ({
-      data: [{ info: { id: "m1" }, parts: [] }],
+      data: [{ info: { id: "m1", role: "assistant" }, parts: [] }],
       error: undefined,
       response: { status: 200, headers: makeHeaders("   ") },
       input,
@@ -130,7 +138,7 @@ describe("message-io/getMessagePage", () => {
     const input = makeInput({ sessionMessages });
 
     await expect(getMessagePage(input, "s1", 5, "cursor-1")).resolves.toEqual({
-      msgs: [{ info: { id: "m1" }, parts: [] }],
+      msgs: [{ info: { id: "m1", role: "assistant" }, parts: [] }],
       next_cursor: undefined,
     });
     expect(sessionMessages).toHaveBeenCalledWith({
@@ -179,7 +187,7 @@ describe("message-io/getMessage", () => {
         response: { status: 500 },
       })
       .mockResolvedValueOnce({
-        data: { info: { id: "m1" }, parts: [] },
+        data: { info: { id: "m1", role: "assistant" }, parts: [] },
         error: undefined,
         response: { status: 200 },
       });
@@ -197,7 +205,7 @@ describe("message-io/getMessage", () => {
     await expect(getMessage(input, "s1", "m500")).rejects.toThrow(
       "Failed to read message. This may be a temporary issue — try again.",
     );
-    await expect(getMessage(input, "s1", "m1")).resolves.toEqual({ info: { id: "m1" }, parts: [] });
+    await expect(getMessage(input, "s1", "m1")).resolves.toEqual({ info: { id: "m1", role: "assistant" }, parts: [] });
   });
 });
 
@@ -206,7 +214,7 @@ describe("message-io/getAllMessages", () => {
     const sessionMessages = vi.fn(async ({ query }: { query: { before?: string } }) => {
       if (query.before === "cursor-1") {
         return {
-          data: [{ info: { id: "m2" }, parts: [] }],
+          data: [{ info: { id: "m2", role: "assistant" }, parts: [] }],
           error: undefined,
           response: { status: 200, headers: makeHeaders(undefined) },
         };
@@ -218,12 +226,12 @@ describe("message-io/getAllMessages", () => {
 
     await expect(
       getAllMessages(input, "s1", 2, {
-        msgs: [{ info: { id: "m1" }, parts: [] } as unknown as import("./message-io.ts").MessageBundle],
+        msgs: [{ info: { id: "m1", role: "assistant" }, parts: [] } as unknown as import("./message-io.ts").MessageBundle],
         next_cursor: "cursor-1",
       }),
     ).resolves.toEqual([
-      { info: { id: "m1" }, parts: [] },
-      { info: { id: "m2" }, parts: [] },
+      { info: { id: "m1", role: "assistant" }, parts: [] },
+      { info: { id: "m2", role: "assistant" }, parts: [] },
     ]);
     expect(sessionMessages).toHaveBeenCalledTimes(1);
   });
@@ -231,7 +239,7 @@ describe("message-io/getAllMessages", () => {
   test("detects repeated cursors and logs internal error", async () => {
     const appLog = vi.fn(async () => undefined);
     const sessionMessages = vi.fn(async () => ({
-      data: [{ info: { id: "m1" }, parts: [] }],
+      data: [{ info: { id: "m1", role: "assistant" }, parts: [] }],
       error: undefined,
       response: { status: 200, headers: makeHeaders("dup") },
     }));

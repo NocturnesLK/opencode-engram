@@ -13,6 +13,7 @@ import {
   type MessagePage,
   getAllMessages,
   internalScanPageSize,
+  requireMessageRole,
 } from "./message-io.ts";
 
 /**
@@ -49,7 +50,7 @@ export async function fetchTurnItems(
   const allMessages = await getAllMessages(input, sessionId, scanPageSize, seedPage, backend);
   return allMessages.map((msg): TurnComputeItem => ({
     id: msg.info.id,
-    role: msg.info.role === "user" ? "user" : "assistant",
+    role: requireMessageRole(msg.info.role),
     time: msg.info.time?.created,
   }));
 }

@@ -13,7 +13,6 @@ import type {
   HistoryToolPart,
   HistoryToolState,
   HistoryToolStateCompleted,
-  HistoryToolStateError,
   HistoryToolStatePending,
   HistoryToolStateRunning,
   NormalizedFilePart,
@@ -76,57 +75,54 @@ function isCompleted(state: HistoryToolState): state is HistoryToolStateComplete
   return state.status === "completed";
 }
 
-function isError(state: HistoryToolState): state is HistoryToolStateError {
-  return state.status === "error";
-}
-
 /**
  * Extract normalized state information from a tool part state.
  */
 export function extractToolState(part: HistoryToolPart): ToolStateExtract {
   const state = part.state;
 
-  if (isCompleted(state)) {
-    return {
-      status: "completed",
-      title: state.title,
-      input: state.input,
-      content: state.output,
-    };
-  }
+  switch (state.status) {
+    case "completed": {
+      return {
+        status: "completed",
+        title: state.title,
+        input: state.input,
+        content: state.output,
+      };
+    }
 
-  if (isError(state)) {
-    return {
-      status: "error",
-      title: null,
-      input: state.input,
-      content: state.error,
-    };
-  }
+    case "error": {
+      return {
+        status: "error",
+        title: null,
+        input: state.input,
+        content: state.error,
+      };
+    }
 
-  if (isRunning(state)) {
-    return {
-      status: "running",
-      title: state.title ?? null,
-      input: state.input,
-      content: undefined,
-    };
-  }
+    case "running": {
+      return {
+        status: "running",
+        title: state.title ?? null,
+        input: state.input,
+        content: undefined,
+      };
+    }
 
-  if (isPending(state)) {
-    return {
-      status: "pending",
-      title: null,
-      input: state.input,
-      content: undefined,
-    };
-  }
+    case "pending": {
+      return {
+        status: "pending",
+        title: null,
+        input: state.input,
+        content: undefined,
+      };
+    }
 
-  const unexpectedStatus =
-    state && typeof state === "object" && "status" in state
-      ? String((state as { status: unknown }).status)
-      : typeof state;
-  throw new Error(`Unsupported tool state '${unexpectedStatus}'`);
+    default: {
+      const unexpectedStatus = String((state as { status?: unknown }).status ?? "unknown");
+      throw new Error(`Unsupported tool state '${unexpectedStatus}'`);
+    }
+  }
 }
 
 // =============================================================================
