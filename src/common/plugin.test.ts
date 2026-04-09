@@ -406,7 +406,7 @@ describe("plugin/tool argument validation", () => {
     ).rejects.toThrow("part_id is required");
   });
 
-  test("search validates query and normalizes literal/types", async () => {
+  test("search validates query and normalizes literal/type", async () => {
     vi.mocked(loadEngramConfig).mockResolvedValueOnce(makeConfig({ upstream: true }));
     const plugin = await EngramPlugin(makeInput());
     const ctx = makeCtx();
@@ -428,17 +428,25 @@ describe("plugin/tool argument validation", () => {
     const searchInput2 = vi.mocked(searchData).mock.calls.at(-1)?.[3];
     expect(searchInput2).toEqual({ query: "hi", literal: true, limit: 5, types: ["text", "tool"] });
 
-    await (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: ["tool", "reasoning", "tool"] }, ctx);
+    await (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: " tool | reasoning | tool " }, ctx);
     const searchInput3 = vi.mocked(searchData).mock.calls.at(-1)?.[3];
     expect(searchInput3).toEqual({ query: "hi", literal: false, limit: 5, types: ["tool", "reasoning"] });
 
     await expect(
-      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: [] }, ctx),
-    ).rejects.toThrow("type must contain at least one of: text, tool, reasoning");
+      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: "" }, ctx),
+    ).rejects.toThrow("type must be a pipe-delimited string containing one or more of: text, tool, reasoning");
 
     await expect(
-      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: ["bad"] }, ctx),
-    ).rejects.toThrow("type must contain only: text, tool, reasoning");
+      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: "tool||reasoning" }, ctx),
+    ).rejects.toThrow("type must not contain empty segments. Use pipe-delimited values: text|tool|reasoning");
+
+    await expect(
+      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: "bad" }, ctx),
+    ).rejects.toThrow("type must contain only pipe-delimited values: text, tool, reasoning");
+
+    await expect(
+      (plugin.tool as any).history_search.execute({ session_id: "s", query: "hi", type: 1 }, ctx),
+    ).rejects.toThrow("type must be a pipe-delimited string containing one or more of: text, tool, reasoning");
   });
 });
 

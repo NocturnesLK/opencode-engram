@@ -24,11 +24,11 @@ Retrieve from history when the consequence of NOT having the information is:
 
 #### Search (history_search)
 - **Precise**: Set \`literal=true\` for exact substring matches (e.g., unique identifiers, paths). Avoid for common terms.
-- **Minimal**: Filter by type to reduce noise:
-  - \`type=[text]\`: Find specific communications/messages.
-  - \`type=[tool]\`: Locate paths, errors, or identifiers.
-  - \`type=[reasoning]\`: Find decision rationales.
-- **Maximal**: Set \`type=[text,tool,reasoning]\` to verify the existence of a fact across all layers. Ineffective for retrieving detailed context.
+- **Minimal**: Filter by type to reduce noise (default \`type="text|tool"\`):
+  - \`type=text\`: Find specific communications/messages.
+  - \`type=tool\`: Locate paths, errors, or identifiers.
+  - \`type=reasoning\`: Find decision rationales.
+- **Maximal**: Set \`type=text|tool|reasoning\` to verify the existence of a fact across all layers. Ineffective for retrieving detailed context.
 `
 // =============================================================================
 // State Management

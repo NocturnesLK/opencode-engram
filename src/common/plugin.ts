@@ -101,6 +101,9 @@ function normalizeOverviewTurnIndex(value: number | undefined) {
 
 const searchQueryMaxLength = 500;
 const SEARCH_TYPES = ["text", "tool", "reasoning"] as const satisfies readonly SearchPartType[];
+const defaultSearchTypes = ["text", "tool"] as const satisfies readonly SearchPartType[];
+const searchTypeOptions = SEARCH_TYPES.join(", ");
+const searchTypePipeExample = SEARCH_TYPES.join("|");
 
 function checkSearchQuery(query?: string): string {
   if (query === undefined || query === null) {
@@ -121,31 +124,31 @@ function normalizeSearchLiteral(literal?: boolean): boolean {
   return literal === true;
 }
 
-function normalizeSearchTypes(value?: string[]): SearchPartType[] {
+function normalizeSearchTypes(value?: string): SearchPartType[] {
   if (value === undefined) {
-    return ["text", "tool"];
+    return [...defaultSearchTypes];
   }
 
-  if (!Array.isArray(value) || value.length === 0) {
-    invalid("type must contain at least one of: text, tool, reasoning");
+  if (typeof value !== "string" || value.trim().length === 0) {
+    invalid(`type must be a pipe-delimited string containing one or more of: ${searchTypeOptions}`);
   }
 
   const result: SearchPartType[] = [];
   const seen = new Set<SearchPartType>();
-  for (const item of value) {
-    if (!SEARCH_TYPES.includes(item as SearchPartType)) {
-      invalid("type must contain only: text, tool, reasoning");
+  for (const segment of value.split("|")) {
+    const normalizedSegment = segment.trim();
+    if (normalizedSegment.length === 0) {
+      invalid(`type must not contain empty segments. Use pipe-delimited values: ${searchTypePipeExample}`);
     }
-    const normalized = item as SearchPartType;
+    if (!SEARCH_TYPES.includes(normalizedSegment as SearchPartType)) {
+      invalid(`type must contain only pipe-delimited values: ${searchTypeOptions}`);
+    }
+    const normalized = normalizedSegment as SearchPartType;
     if (seen.has(normalized)) {
       continue;
     }
     seen.add(normalized);
     result.push(normalized);
-  }
-
-  if (result.length === 0) {
-    invalid("type must contain at least one of: text, tool, reasoning");
   }
 
   return result;
@@ -553,9 +556,9 @@ RETURNS: Matching messages grouped by relevance. Each message includes role, tur
               "If true, match the query as an exact case-sensitive substring. Use for file paths, identifiers, error codes. Default false uses BM25 fulltext search",
             ),
           type: tool.schema
-            .array(tool.schema.string())
+            .string()
             .optional()
-            .describe("Searchable content types to include. One or more of text, tool, reasoning. Default [text, tool]"),
+            .describe("Searchable content types to include as a pipe-delimited string. One or more of text, tool, reasoning. Default text|tool"),
         },
         async execute(args, ctx) {
           return runCall(

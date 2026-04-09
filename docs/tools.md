@@ -250,7 +250,7 @@ Search session history by keyword or literal string.
 - `session_id`: Required. Target session ID.
 - `query`: Required. Search keywords, maximum length `500`. Short specific terms work best — an identifier like `computeTurns` beats a generic word like `function`.
 - `literal`: Optional. Default `false`. If true, match the query as an exact case-sensitive substring. Use for file paths, identifiers, error codes.
-- `type`: Optional. Default `["text", "tool"]`. One or more of `text`, `tool`, `reasoning`. Only those content types are searched and returned.
+- `type`: Optional. Default `text|tool`. Pipe-delimited string containing one or more of `text`, `tool`, `reasoning`, for example `text|reasoning`. Only those content types are searched and returned.
 
 ### Behavior
 
@@ -305,8 +305,9 @@ Search session history by keyword or literal string.
 - `turn_index must be a non-negative integer`
 - `query is required`
 - `query is too long. Use shorter, more specific keywords.`
-- `type must contain at least one of: text, tool, reasoning`
-- `type must contain only: text, tool, reasoning`
+- `type must be a pipe-delimited string containing one or more of: text, tool, reasoning`
+- `type must not contain empty segments. Use pipe-delimited values: text|tool|reasoning`
+- `type must contain only pipe-delimited values: text, tool, reasoning`
 
 ### Session and Pagination Errors
 
