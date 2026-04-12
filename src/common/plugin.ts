@@ -576,7 +576,7 @@ RETURNS: Matching messages grouped by relevance. Each message includes role, tur
             .boolean()
             .optional()
             .describe(
-              "If true, match the query as an exact case-sensitive substring. Use for file paths, identifiers, error codes. Default false uses BM25 fulltext search",
+              "If true, match the query as an exact substring (case-insensitive). Use for file paths, identifiers, error codes. Default false uses BM25 fulltext search",
             ),
           type: tool.schema
             .string()

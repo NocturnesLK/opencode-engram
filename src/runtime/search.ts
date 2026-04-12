@@ -757,14 +757,17 @@ function generateStartSnippet(content: string, snippetLength: number): string {
 function findLiteralPositions(
   content: string,
   term: string,
+  caseInsensitive = false,
 ): Array<{ start: number; end: number }> {
   const positions: Array<{ start: number; end: number }> = [];
+  const searchContent = caseInsensitive ? content.toLowerCase() : content;
+  const searchTerm = caseInsensitive ? term.toLowerCase() : term;
   let pos = 0;
 
-  while (pos < content.length) {
-    const found = content.indexOf(term, pos);
+  while (pos < searchContent.length) {
+    const found = searchContent.indexOf(searchTerm, pos);
     if (found === -1) break;
-    positions.push({ start: found, end: found + term.length });
+    positions.push({ start: found, end: found + searchTerm.length });
     pos = found + 1;
   }
 
@@ -887,7 +890,7 @@ export function generateSnippets(
 
   if (exact) {
     // Exact mode: rank literal substring occurrences by earliest position.
-    const positions = findLiteralPositions(content, query);
+    const positions = findLiteralPositions(content, query, true);
     if (positions.length === 0) {
       // Fallback: return start of content
       const snippet = generateStartSnippet(content, snippetLength);
@@ -1005,10 +1008,39 @@ function compareRawHitsByPriority(a: RawSearchHit, b: RawSearchHit): number {
 }
 
 /**
+ * Score boost applied to BM25 hits that contain the query as an exact
+ * case-insensitive substring. Ensures documents with verbatim matches
+ * always rank above documents that only match individual tokenized terms.
+ *
+ * The value is large enough to dominate any BM25 score while preserving
+ * relative BM25 ordering among boosted hits (BM25 score acts as tiebreaker).
+ */
+const exactSubstringBoostScore = 1e6;
+
+/**
+ * Apply exact substring boost to fulltext/BM25 search hits.
+ *
+ * Hits whose content contains the full query as a contiguous substring
+ * (case-insensitive) receive a large score boost.
+ */
+function applyExactSubstringBoost(
+  hits: RawSearchHit[],
+  query: string,
+): void {
+  const lowerQuery = query.toLowerCase();
+  for (const hit of hits) {
+    if (hit.content.toLowerCase().includes(lowerQuery)) {
+      hit.score += exactSubstringBoostScore;
+    }
+  }
+}
+
+/**
  * Execute exact search with literal substring matching.
  *
  * This path is independent from Orama and uses direct substring checks
  * on cached content documents for predictable Unicode behavior.
+ * Matching is case-insensitive.
  */
 async function executeExactSearch(
   documents: SearchDocument[],
@@ -1019,6 +1051,7 @@ async function executeExactSearch(
     return { totalHits: 0, hits: [] };
   }
 
+  const lowerQuery = query.toLowerCase();
   const hits: RawSearchHit[] = [];
   let totalHits = 0;
 
@@ -1027,11 +1060,11 @@ async function executeExactSearch(
       continue;
     }
 
-    if (query.length > doc.content.length) {
+    if (lowerQuery.length > doc.content.length) {
       continue;
     }
 
-    const position = doc.content.indexOf(query);
+    const position = doc.content.toLowerCase().indexOf(lowerQuery);
     if (position === -1) {
       continue;
     }
@@ -1234,6 +1267,11 @@ export async function executeSearch(
   const searchResult = input.literal
     ? await executeExactSearch(cache.documents, input.query, allowedTypes)
     : await executeFulltextSearch(cache.db, input.query, input.types);
+
+  // Boost fulltext hits containing the exact query as a substring.
+  if (!input.literal && searchResult.hits.length > 0) {
+    applyExactSubstringBoost(searchResult.hits, input.query);
+  }
 
   if (searchResult.totalHits === 0 || searchResult.hits.length === 0) {
     return { totalHits: 0, hits: [] };
