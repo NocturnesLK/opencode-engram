@@ -12,7 +12,7 @@ Retrieve from history when the consequence of NOT having the information is:
 - Prefer search over manual browse-window scanning when you do not already know the approximate location of the answer.
 - Do not call pull unless the preview or search snippet is clearly insufficient.
 - Parallel independent calls — multiple searches or pulls that don't depend on each other should run in the same round.
-- Browse in small window (e.g., 3) initially.
+- Browse in small window (e.g., 3) initially and avoid overlapping window ranges as much as possible, as they result in duplicate information.
 
 ### Technique 
 
