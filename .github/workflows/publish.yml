@@ -54,8 +54,12 @@ jobs:
 
       - name: Verify release commit is on main
         run: |
-          git fetch origin main --tags
+          git fetch origin main
           tag="${{ steps.release_meta.outputs.tag }}"
+
+          if ! git rev-parse "$tag" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/$tag:refs/tags/$tag"
+          fi
 
           if ! git rev-parse "$tag" >/dev/null 2>&1; then
             echo "::error::Release tag $tag does not exist in the repository"
