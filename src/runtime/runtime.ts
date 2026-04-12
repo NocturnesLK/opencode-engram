@@ -155,7 +155,7 @@ export async function runCall<TOutput extends object>(
         tool,
         error: message,
       });
-    }, input.client);
+    });
     if (isDebugDirectoryNeeded(config.debug_mode)) {
       await ensureDebugGitIgnore(projectRoot);
     }

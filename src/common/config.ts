@@ -2,8 +2,6 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import type { createOpencodeClient } from "@opencode-ai/sdk";
-
 export type DebugModeConfig = {
   enable?: boolean;
   log_tool_calls?: boolean;
@@ -66,8 +64,6 @@ type RawConfig = {
 };
 
 type ConfigIssueReporter = (message: string) => void;
-
-type SdkClient = ReturnType<typeof createOpencodeClient>;
 
 export type ResolvedDebugModeConfig = {
   enable: boolean;
@@ -272,33 +268,8 @@ function localGlobalConfigRoots() {
   return roots;
 }
 
-async function sdkGlobalConfigRoot(client?: SdkClient) {
-  if (!client) {
-    return;
-  }
-
-  try {
-    const result = await client.path.get({ throwOnError: false });
-    const config = result.data?.config?.trim();
-    if (config) {
-      return config;
-    }
-  } catch {
-    return;
-  }
-}
-
-async function globalConfigRoots(client?: SdkClient) {
-  const roots = [] as string[];
-  const sdkRoot = await sdkGlobalConfigRoot(client);
-
-  if (sdkRoot) {
-    roots.push(sdkRoot);
-  }
-
-  roots.push(...localGlobalConfigRoots());
-
-  return [...new Set(roots)];
+function globalConfigRoots() {
+  return [...new Set(localGlobalConfigRoots())];
 }
 
 function defaultDebugModeConfig(): ResolvedDebugModeConfig {
@@ -941,10 +912,9 @@ async function readConfigFile(filePath: string) {
 export async function loadEngramConfig(
   projectRoot = process.cwd(),
   reportIssue: ConfigIssueReporter = noopConfigIssueReporter,
-  client?: SdkClient,
 ) {
   let resolved = defaults();
-  const roots = [...(await globalConfigRoots(client)), projectRoot];
+  const roots = [...globalConfigRoots(), projectRoot];
 
   for (const root of roots) {
     for (const name of configNames) {

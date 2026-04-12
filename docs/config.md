@@ -6,10 +6,9 @@ This document describes the current configuration structure and behavior corresp
 
 Engram loads `opencode-engram.json` or `opencode-engram.jsonc` from the following locations in order:
 
-1. The config directory returned by the OpenCode SDK: `client.path.get().data.config`
-2. The local global config directory: `$XDG_CONFIG_HOME/opencode` or `~/.config/opencode`
-3. On Windows, additionally checks: `%APPDATA%/opencode`, `%LOCALAPPDATA%/opencode`
-4. The current project root directory
+1. The local global config directory: `$XDG_CONFIG_HOME/opencode` or `~/.config/opencode`
+2. On Windows, additionally checks: `%APPDATA%/opencode`, `%LOCALAPPDATA%/opencode`
+3. The current project root directory
 
 Later-loaded configs override earlier results, so the project root config has the highest priority.
 
