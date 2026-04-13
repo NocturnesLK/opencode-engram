@@ -26,10 +26,10 @@ describe("serialize/browse", () => {
     const withoutPreview = serializeBrowseItem(meta, undefined);
     expect(withoutPreview).toEqual({
       role: "user",
-      turn_index: 1,
+      turn_number: 1,
       message_id: "m1",
     });
-    expect(Object.keys(withoutPreview)).toEqual(["role", "turn_index", "message_id"]);
+    expect(Object.keys(withoutPreview)).toEqual(["role", "turn_number", "message_id"]);
 
     const out = serializeBrowse(null, [serializeBrowseItem(meta, "hi")], null);
     expect(out).toEqual({
@@ -37,14 +37,14 @@ describe("serialize/browse", () => {
       messages: [
         {
           role: "user",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m1",
           preview: "hi",
         },
       ],
       after_message_id: null,
     });
-    expect(Object.keys(out.messages[0]!)).toEqual(["role", "turn_index", "message_id", "preview"]);
+    expect(Object.keys(out.messages[0]!)).toEqual(["role", "turn_number", "message_id", "preview"]);
   });
 
   test("omits browse anchors when not requested", () => {
@@ -61,7 +61,7 @@ describe("serialize/browse", () => {
       messages: [
         {
           role: "user",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m1",
           preview: "hi",
         },
@@ -91,24 +91,24 @@ describe("serialize/browse", () => {
     const userOut = serializeBrowseItem(userMeta, "hello");
     expect(userOut).toEqual({
       role: "user",
-      turn_index: 1,
+      turn_number: 1,
       message_id: "u1",
       preview: "hello",
       attachment: ["1 image", "a.ts"],
     });
-    expect(Object.keys(userOut)).toEqual(["role", "turn_index", "message_id", "preview", "attachment"]);
+    expect(Object.keys(userOut)).toEqual(["role", "turn_number", "message_id", "preview", "attachment"]);
 
     const assistantOut = serializeBrowseItem(assistantMeta, undefined);
     expect(assistantOut).toEqual({
       role: "assistant",
-      turn_index: 1,
+      turn_number: 1,
       message_id: "a1",
       tool: {
         calls: ["2× bash: 1× error"],
         outcome: "recovered",
       },
     });
-    expect(Object.keys(assistantOut)).toEqual(["role", "turn_index", "message_id", "tool"]);
+    expect(Object.keys(assistantOut)).toEqual(["role", "turn_number", "message_id", "tool"]);
   });
 
   test("uses completed as default tool.outcome when missing", () => {
@@ -123,7 +123,7 @@ describe("serialize/browse", () => {
 
     expect(serializeBrowseItem(assistantMeta, "done")).toEqual({
       role: "assistant",
-      turn_index: 2,
+      turn_number: 2,
       message_id: "a2",
       preview: "done",
       tool: {
@@ -148,7 +148,7 @@ describe("serialize/overview", () => {
       },
     );
     expect(turn).toEqual({
-      turn_index: 2,
+      turn_number: 2,
       user: {
         preview: "u",
         message_id: "msg_2",
@@ -186,7 +186,7 @@ describe("serialize/read", () => {
     expect(out).toEqual({
       message_id: "m1",
       role: "assistant",
-      turn_index: 1,
+      turn_number: 1,
       time: "1970-01-01T00:00:00.000Z",
       sections: [
         { type: "text", content: "hi" },
@@ -223,7 +223,7 @@ describe("serialize/read", () => {
     expect(out).toEqual({
       message_id: "m2",
       role: "user",
-      turn_index: 2,
+      turn_number: 2,
       time: "unknown",
       sections: [
         { type: "text", content: null },
@@ -260,7 +260,7 @@ describe("serialize/search", () => {
     });
     expect(msgWithoutRemain).toEqual({
       role: "user",
-      turn_index: 1,
+      turn_number: 1,
       message_id: "m0",
       hits: [textHit],
     });
@@ -268,7 +268,7 @@ describe("serialize/search", () => {
       messages: [
         {
           role: "user",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m0",
           hits: [
             {
@@ -280,7 +280,7 @@ describe("serialize/search", () => {
         },
         {
           role: "assistant",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m1",
           hits: [
             {

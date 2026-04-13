@@ -94,7 +94,7 @@ vi.mock("../runtime/charting.ts", () => {
       overview: {
         turns: [
           {
-            turn_index: 1,
+            turn_number: 1,
             user: {
               preview: "u",
               message_id: "m1",
@@ -111,13 +111,13 @@ vi.mock("../runtime/charting.ts", () => {
         messages: [
           {
             role: "user",
-            turn_index: 1,
+            turn_number: 1,
             message_id: "m1",
             preview: "u",
           },
           {
             role: "assistant",
-            turn_index: 1,
+            turn_number: 1,
             message_id: "m2",
             preview: "a",
           },
@@ -473,7 +473,7 @@ describe("plugin/tool argument validation", () => {
     ).rejects.toThrow("session_id is required");
   });
 
-  test("overview without turn_index forwards the default latest-turn request", async () => {
+  test("overview without turn_number forwards the default latest-turn request", async () => {
     vi.mocked(loadEngramConfig).mockResolvedValueOnce(makeConfig({ upstream: true }));
     const plugin = await EngramPlugin(makeInput());
     const ctx = makeCtx();
@@ -494,14 +494,14 @@ describe("plugin/tool argument validation", () => {
     );
   });
 
-  test("overview validates turn_index and window values", async () => {
+  test("overview validates turn_number and window values", async () => {
     vi.mocked(loadEngramConfig).mockResolvedValueOnce(makeConfig({ upstream: true }));
     const plugin = await EngramPlugin(makeInput());
     const ctx = makeCtx();
 
     await expect(
-      (plugin.tool as any).history_browse_turns.execute({ session_id: "anchor", turn_index: -1 }, ctx),
-    ).rejects.toThrow("turn_index must be a non-negative integer");
+      (plugin.tool as any).history_browse_turns.execute({ session_id: "anchor", turn_number: -1 }, ctx),
+    ).rejects.toThrow("turn_number must be a non-negative integer");
 
     await expect(
       (plugin.tool as any).history_browse_turns.execute({ session_id: "anchor", num_before: -1 }, ctx),
@@ -588,7 +588,7 @@ describe("plugin/tool forwarding", () => {
     const ctx = makeCtx();
 
     await (plugin.tool as any).history_browse_messages.execute({ session_id: "s", message_id: "cursor-1", num_before: 2, num_after: 1 }, ctx);
-    await (plugin.tool as any).history_browse_turns.execute({ session_id: "s", turn_index: 3, num_before: 1, num_after: 2 }, ctx);
+    await (plugin.tool as any).history_browse_turns.execute({ session_id: "s", turn_number: 3, num_before: 1, num_after: 2 }, ctx);
     await (plugin.tool as any).history_pull_message.execute({ session_id: "s", message_id: "  m1  " }, ctx);
     await (plugin.tool as any).history_pull_part.execute({ session_id: "s", message_id: "  m1  ", part_id: "  p1  " }, ctx);
 
@@ -819,7 +819,7 @@ describe("plugin/hooks", () => {
       {
         turns: [
           {
-            turn_index: 1,
+            turn_number: 1,
             user: {
               preview: "u",
               message_id: "m1",
@@ -836,13 +836,13 @@ describe("plugin/hooks", () => {
         messages: [
           {
             role: "user",
-            turn_index: 1,
+            turn_number: 1,
             message_id: "m1",
             preview: "u",
           },
           {
             role: "assistant",
-            turn_index: 1,
+            turn_number: 1,
             message_id: "m2",
             preview: "a",
           },

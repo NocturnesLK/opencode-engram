@@ -18,7 +18,7 @@ Retrieve from history when the consequence of NOT having the information is:
 
 #### Browse (Turns & Messages)
 - **Recent items**: Set \`num_before\`, omit \`num_after\` and ID/index.
-- **From start (turns)**: Set \`turn_index=1\`, omit \`num_before\`.
+- **From start (turns)**: Set \`turn_number=1\`, omit \`num_before\`.
 - **Nearby context**: Set a specific ID/index and a small window to explore around a search result.
 - **Full turn (messages)**: Set \`message_id=user.message_id\` and \`num_after=assistant.total_messages\`.
 

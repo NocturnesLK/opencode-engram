@@ -94,7 +94,7 @@ If I knew specific keywords — a file path, an identifier, or an error message 
 
 ${toJsonBlock(overview)}
 
-I can call this again with a specific turn_index plus num_before and num_after to focus on nearby turns — to see earlier history, pass the earliest visible turn_index with num_before=N and num_after=0. When turn summaries are not enough, history_browse_messages gives message-level previews.
+I can call this again with a specific turn_number plus num_before and num_after to focus on nearby turns — to see earlier history, pass the earliest visible turn_number with num_before=N and num_after=0. When turn summaries are not enough, history_browse_messages gives message-level previews.
 
 The overview gives structure but not detail. I called history_browse_messages on the latest turn's message_id with num_before=${windows.recentMessages} and num_after=0 to get surrounding context:
 

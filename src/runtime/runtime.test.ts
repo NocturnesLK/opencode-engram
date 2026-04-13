@@ -321,13 +321,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m2",
         preview: "u2",
       },
       {
         role: "assistant",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m3",
         preview: "a3",
       },
@@ -374,19 +374,19 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "u1",
       },
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m2",
         preview: "u2",
       },
       {
         role: "assistant",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m3",
         preview: "a3",
       },
@@ -439,13 +439,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "u1",
       },
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m2",
         preview: "u2",
       },
@@ -494,13 +494,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "before2",
       },
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m2",
         preview: "before",
       },
@@ -548,25 +548,25 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "first user",
       },
       {
         role: "assistant",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m2",
         preview: "first answer",
       },
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m3",
         preview: "second user",
       },
       {
         role: "assistant",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m4",
         preview: "second answer",
       },
@@ -616,13 +616,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m3",
         preview: "user 2",
       },
       {
         role: "assistant",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "m4",
         preview: "answer 2",
       },
@@ -764,13 +764,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "u1",
         preview: "[compaction trigger]",
       },
       {
         role: "assistant",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "a1",
         preview: "[tool calls only]",
         tool: {
@@ -817,13 +817,13 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "u1",
         preview: "hello",
       },
       {
         role: "assistant",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "a1",
       },
     ]);
@@ -869,7 +869,7 @@ describe("runtime/browseData", () => {
     expect(out.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "u1",
         preview: "abc...",
       },
@@ -923,7 +923,7 @@ describe("runtime/overviewData", () => {
     expect(out).toEqual({
       turns: [
         {
-          turn_index: 1,
+          turn_number: 1,
           user: {
             preview: "one",
             message_id: "u1",
@@ -934,7 +934,7 @@ describe("runtime/overviewData", () => {
           },
         },
         {
-          turn_index: 2,
+          turn_number: 2,
           user: {
             preview: "two",
             message_id: "u2",
@@ -984,7 +984,7 @@ describe("runtime/overviewData", () => {
     expect(out).toEqual({
       turns: [
         {
-          turn_index: 1,
+          turn_number: 1,
           user: {
             preview: "has attachments",
             message_id: "u1",
@@ -1033,7 +1033,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "old user",
           message_id: "u1",
@@ -1086,7 +1086,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "first user",
           message_id: "m1",
@@ -1097,7 +1097,7 @@ describe("runtime/overviewData", () => {
         },
       },
       {
-        turn_index: 2,
+        turn_number: 2,
         user: {
           preview: "second user",
           message_id: "m3",
@@ -1153,7 +1153,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           message_id: "u1",
           preview: "[compaction trigger]",
@@ -1207,7 +1207,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "first user",
           message_id: "m1",
@@ -1252,7 +1252,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "hello",
           message_id: "u1",
@@ -1308,7 +1308,7 @@ describe("runtime/overviewData", () => {
       numAfter: 0,
     });
     expect(out.turns[0]).toEqual({
-      turn_index: 1,
+      turn_number: 1,
       user: {
         message_id: "u1",
         preview: "do it",
@@ -1378,7 +1378,7 @@ describe("runtime/overviewData", () => {
     });
 
     expect(out.turns[0]).toEqual({
-      turn_index: 1,
+      turn_number: 1,
       user: {
         message_id: "u1",
         preview: "update files",
@@ -1440,7 +1440,7 @@ describe("runtime/overviewData", () => {
     expect(out).toEqual({
       turns: [
         {
-          turn_index: 2,
+          turn_number: 2,
           user: {
             preview: "[compaction trigger]",
             message_id: "ct1",
@@ -1451,7 +1451,7 @@ describe("runtime/overviewData", () => {
           },
         },
         {
-          turn_index: 3,
+          turn_number: 3,
           user: {
             preview: "mid user",
             message_id: "m3",
@@ -1462,7 +1462,7 @@ describe("runtime/overviewData", () => {
           },
         },
         {
-          turn_index: 4,
+          turn_number: 4,
           user: {
             preview: "[compaction trigger]",
             message_id: "ct2",
@@ -1473,7 +1473,7 @@ describe("runtime/overviewData", () => {
           },
         },
         {
-          turn_index: 5,
+          turn_number: 5,
           user: {
             preview: "latest user",
             message_id: "m5",
@@ -1487,7 +1487,7 @@ describe("runtime/overviewData", () => {
     });
   });
 
-  test("defaults to the latest visible turn when turn_index is omitted", async () => {
+  test("defaults to the latest visible turn when turn_number is omitted", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1529,7 +1529,7 @@ describe("runtime/overviewData", () => {
     expect(out).toEqual({
       turns: [
         {
-          turn_index: 3,
+          turn_number: 3,
           user: {
             preview: "second user",
             message_id: "m3",
@@ -1543,7 +1543,7 @@ describe("runtime/overviewData", () => {
     });
   });
 
-  test("returns visible turns from the requested window even when turn_index is hidden", async () => {
+  test("returns visible turns from the requested window even when turn_number is hidden", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1586,7 +1586,7 @@ describe("runtime/overviewData", () => {
 
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "first user",
           message_id: "m1",
@@ -1594,7 +1594,7 @@ describe("runtime/overviewData", () => {
         assistant: null,
       },
       {
-        turn_index: 3,
+        turn_number: 3,
         user: {
           preview: "second user",
           message_id: "m3",
@@ -1607,7 +1607,7 @@ describe("runtime/overviewData", () => {
     ]);
   });
 
-  test("returns visible turns from the requested window even when turn_index is missing", async () => {
+  test("returns visible turns from the requested window even when turn_number is missing", async () => {
     const sessionID = "parent";
     const store = {
       sessions: new Map<string, import("../core/session.ts").SdkSessionData>([
@@ -1644,7 +1644,7 @@ describe("runtime/overviewData", () => {
 
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "first user",
           message_id: "m1",
@@ -1693,7 +1693,7 @@ describe("runtime/overviewData", () => {
         numAfter: 0,
       }),
     ).rejects.toThrow(
-      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_number` and retry.",
     );
   });
 
@@ -1733,7 +1733,7 @@ describe("runtime/overviewData", () => {
         numAfter: 0,
       }),
     ).rejects.toThrow(
-      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_number` and retry.",
     );
   });
 
@@ -1779,7 +1779,7 @@ describe("runtime/overviewData", () => {
     });
     expect(out.turns).toEqual([
       {
-        turn_index: 1,
+        turn_number: 1,
         user: {
           preview: "first user",
           message_id: "m1",
@@ -1790,7 +1790,7 @@ describe("runtime/overviewData", () => {
         },
       },
       {
-        turn_index: 3,
+        turn_number: 3,
         user: {
           preview: "second user",
           message_id: "m3",
@@ -1840,7 +1840,7 @@ describe("runtime/overviewData", () => {
     expect(result.overview).toEqual({
       turns: [
         {
-          turn_index: 1,
+          turn_number: 1,
           user: {
             preview: "first user",
             message_id: "m1",
@@ -1851,7 +1851,7 @@ describe("runtime/overviewData", () => {
           },
         },
         {
-          turn_index: 3,
+          turn_number: 3,
           user: {
             preview: "second user",
             message_id: "m3",
@@ -1866,37 +1866,37 @@ describe("runtime/overviewData", () => {
     expect(result.latestTurnDetail.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "first user",
       },
       {
         role: "assistant",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m2",
         preview: "first answer",
       },
       {
         role: "user",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "ct1",
         preview: "[compaction trigger]",
       },
       {
         role: "assistant",
-        turn_index: 2,
+        turn_number: 2,
         message_id: "sum1",
         preview: "summary 1",
       },
       {
         role: "user",
-        turn_index: 3,
+        turn_number: 3,
         message_id: "m3",
         preview: "second user",
       },
       {
         role: "assistant",
-        turn_index: 3,
+        turn_number: 3,
         message_id: "m4",
         preview: "second answer",
       },
@@ -1937,7 +1937,7 @@ describe("runtime/overviewData", () => {
     expect(result.overview).toEqual({
       turns: [
         {
-          turn_index: 1,
+          turn_number: 1,
           user: {
             preview: "before user",
             message_id: "m1",
@@ -1952,13 +1952,13 @@ describe("runtime/overviewData", () => {
     expect(result.latestTurnDetail.messages).toEqual([
       {
         role: "user",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m1",
         preview: "before user",
       },
       {
         role: "assistant",
-        turn_index: 1,
+        turn_number: 1,
         message_id: "m2",
         preview: "before answer",
       },
@@ -2014,7 +2014,7 @@ describe("runtime/readData", () => {
     expect(out).toEqual({
       message_id: "m1",
       role: "assistant",
-      turn_index: 1,
+      turn_number: 1,
       time: "1970-01-01T00:00:00.001Z",
       sections: [
         { type: "text", content: "hello" },
@@ -2253,7 +2253,7 @@ describe("runtime/searchData", () => {
       messages: [
         {
           role: "user",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m1",
           hits: [
             {
@@ -2442,7 +2442,7 @@ describe("runtime/searchData", () => {
       messages: [
         {
           role: "assistant",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "m2",
           hits: [
             {

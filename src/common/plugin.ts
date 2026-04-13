@@ -95,7 +95,7 @@ function normalizeOverviewTurnIndex(value: number | undefined) {
     return undefined;
   }
   if (!Number.isInteger(value) || value < 0) {
-    invalid("turn_index must be a non-negative integer");
+    invalid("turn_number must be a non-negative integer");
   }
   return value;
 }
@@ -330,33 +330,33 @@ export function createEngramPlugin(options?: EngramPluginOptions): Plugin {
 
 USE WHEN:
 - You need to understand the context, goals, or what happened in a session
-- You need to inspect turns around a known turn_index
+- You need to inspect turns around a known turn_number
 
 DO NOT USE WHEN:
 - You already know what keywords to look for -> use history_search (overview gives the big picture; search locates specific content by keywords)
 - You need exact message detail -> use history_browse_messages or history_pull_message
 
-RETURNS: turn summaries in ascending turn_index order. Each turn includes user preview and message_id, plus assistant preview and total message count`,
+RETURNS: turn summaries in ascending turn_number order. Each turn includes user preview and message_id, plus assistant preview and total message count`,
           args: {
             session_id: tool.schema
               .string()
               .describe("Target session identifier"),
-            turn_index: tool.schema
+            turn_number: tool.schema
               .number()
               .optional()
-              .describe("Target turn_index (starting from 1, not 0) for returning. Omit to automatically set the newest visible turn_index"),
+              .describe("Target turn_number (starting from 1, not 0) for returning. Omit to automatically set the newest visible turn_number"),
             num_before: tool.schema
               .number()
               .optional()
-              .describe("How many older turns before turn_index to include. Omit to exclude"),
+              .describe("How many older turns before turn_number to include. Omit to exclude"),
             num_after: tool.schema
               .number()
               .optional()
-              .describe("How many newer turns after turn_index to include. Omit to exclude"),
+              .describe("How many newer turns after turn_number to include. Omit to exclude"),
           },
           async execute(args, ctx) {
             const sessionID = checkSessionId(args.session_id);
-            const turnIndex = normalizeOverviewTurnIndex(args.turn_index);
+            const turnIndex = normalizeOverviewTurnIndex(args.turn_number);
             const numBefore = normalizeOverviewWindowValue(args.num_before, "num_before");
             const numAfter = normalizeOverviewWindowValue(args.num_after, "num_after");
 
@@ -367,7 +367,7 @@ RETURNS: turn summaries in ascending turn_index order. Each turn includes user p
               sessionID,
               {
                 session_id: args.session_id,
-                turn_index: turnIndex,
+                turn_number: turnIndex,
                 num_before: numBefore,
                 num_after: numAfter,
               },
@@ -456,7 +456,7 @@ DO NOT USE WHEN:
 - You don't have a message_id yet -> use history_browse_messages or history_search to find one first
 - You only need one truncated section -> use history_pull_part instead
 
-RETURNS: message metadata including turn_index, plus sections[] in conversation order. Long sections are truncated and include a part_id for follow-up`,
+RETURNS: message metadata including turn_number, plus sections[] in conversation order. Long sections are truncated and include a part_id for follow-up`,
           args: {
             session_id: tool.schema
               .string()
@@ -562,7 +562,7 @@ USE WHEN:
 DO NOT USE WHEN:
 - You want to scan messages in order or navigate to a specific range -> use history_browse_messages (search locates by content; browse navigates by position)
 
-RETURNS: Matching messages grouped by relevance. Each message includes role, turn_index, message_id, and hits[] with context snippets around matches. Search and results can be filtered by content type. Use history_pull_part to expand a specific hit, or history_pull_message to read the full message.`,
+RETURNS: Matching messages grouped by relevance. Each message includes role, turn_number, message_id, and hits[] with context snippets around matches. Search and results can be filtered by content type. Use history_pull_part to expand a specific hit, or history_pull_message to read the full message.`,
         args: {
           session_id: tool.schema
             .string()

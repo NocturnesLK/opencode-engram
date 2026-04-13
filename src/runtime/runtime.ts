@@ -619,7 +619,7 @@ function buildOverviewTurnWindow(
   if (state.turns.length === 0) {
     if (request.turnIndex !== undefined) {
       throw new Error(
-        "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+        "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_number` and retry.",
       );
     }
     return [];
@@ -636,7 +636,7 @@ function buildOverviewTurnWindow(
 
   if (request.turnIndex !== undefined) {
     throw new Error(
-      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_index` and retry.",
+      "The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit `turn_number` and retry.",
     );
   }
 

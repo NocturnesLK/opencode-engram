@@ -42,7 +42,7 @@ function serializeUserBrowseItem(
 ): BrowseUserItemOutput {
   const result: BrowseUserItemOutput = {
     role: "user",
-    turn_index: meta.turn,
+    turn_number: meta.turn,
     message_id: meta.id,
   };
 
@@ -68,7 +68,7 @@ function serializeAssistantBrowseItem(
 ): BrowseAssistantItemOutput {
   const result: BrowseAssistantItemOutput = {
     role: "assistant",
-    turn_index: meta.turn,
+    turn_number: meta.turn,
     message_id: meta.id,
   };
 
@@ -119,7 +119,7 @@ export function serializeOverviewTurn(
   assistant: OverviewTurnOutput["assistant"],
 ): OverviewTurnOutput {
   return {
-    turn_index: turnIndex,
+    turn_number: turnIndex,
     user,
     assistant,
   };
@@ -290,7 +290,7 @@ export function serializeMessageRead(
   const result: Record<string, unknown> = {
     message_id: meta.id,
     role: meta.role,
-    turn_index: meta.turn,
+    turn_number: meta.turn,
     time: toIsoTime(meta.time),
     sections: sections.map((section) => serializeSection(section)),
   };
@@ -376,7 +376,7 @@ export function serializeSearchMessage(
 ): SearchMessageOutput {
   const result: SearchMessageOutput = {
     role,
-    turn_index: turnIndex,
+    turn_number: turnIndex,
     message_id: messageId,
     hits,
   };

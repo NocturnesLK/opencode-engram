@@ -307,7 +307,7 @@ export interface PreviewFallbackHints {
 
 export interface BrowseUserItemOutput {
   role: "user";
-  turn_index: number;
+  turn_number: number;
   message_id: string;
   preview?: string;
   attachment?: string[];
@@ -315,7 +315,7 @@ export interface BrowseUserItemOutput {
 
 export interface BrowseAssistantItemOutput {
   role: "assistant";
-  turn_index: number;
+  turn_number: number;
   message_id: string;
   preview?: string;
   tool?: ToolBlockOutput;
@@ -348,7 +348,7 @@ export interface OverviewAssistantOutput {
  * Turn summary for overview output.
  */
 export interface OverviewTurnOutput {
-  turn_index: number;
+  turn_number: number;
   user: OverviewUserOutput | null;
   assistant: OverviewAssistantOutput | null;
 }
@@ -409,14 +409,14 @@ export interface SearchHitOutput {
  * Search result grouped by message.
  *
  * - role: message role
- * - turn_index: message turn number
+ * - turn_number: message turn number
  * - message_id: identifier for reading full message
  * - hits: array of hits within this message
  * - remain_hits: omitted when 0; number of omitted low-priority hits
  */
 export interface SearchMessageOutput {
   role: MessageRole;
-  turn_index: number;
+  turn_number: number;
   message_id: string;
   hits: SearchHitOutput[];
   remain_hits?: number;

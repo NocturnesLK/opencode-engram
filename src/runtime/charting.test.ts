@@ -8,7 +8,7 @@ vi.mock("./runtime.ts", () => {
         {
           turn: 3,
           output: {
-            turn_index: 3,
+            turn_number: 3,
             user: {
               preview: "u",
               message_id: "u3",
@@ -28,7 +28,7 @@ vi.mock("./runtime.ts", () => {
       messages: [
         {
           role: "user",
-          turn_index: 3,
+          turn_number: 3,
           preview: "u",
         },
       ],
@@ -217,7 +217,7 @@ describe("runtime/charting", () => {
     expect(result.overview).toEqual({
       turns: [
         {
-          turn_index: 3,
+          turn_number: 3,
           user: {
             preview: "u",
             message_id: "u3",

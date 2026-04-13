@@ -244,19 +244,19 @@ describe("runtime/history tools with fake backend", () => {
       messages: [
         {
           role: "user",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "u1",
           preview: "hello from fake backend",
         },
         {
           role: "assistant",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "a1",
           preview: "answer from fake backend",
         },
         {
           role: "user",
-          turn_index: 2,
+          turn_number: 2,
           message_id: "u2",
           preview: "follow-up",
         },
@@ -296,7 +296,7 @@ describe("runtime/history tools with fake backend", () => {
     expect(out).toEqual({
       turns: [
         {
-          turn_index: 1,
+          turn_number: 1,
           user: {
             message_id: "u1",
             preview: "first question",
@@ -311,7 +311,7 @@ describe("runtime/history tools with fake backend", () => {
           },
         },
         {
-          turn_index: 2,
+          turn_number: 2,
           user: {
             message_id: "u2",
             preview: "second question",
@@ -354,7 +354,7 @@ describe("runtime/history tools with fake backend", () => {
     expect(out).toEqual({
       message_id: "a1",
       role: "assistant",
-      turn_index: 1,
+      turn_number: 1,
       time: "1970-01-01T00:00:00.002Z",
       sections: [
         { type: "text", content: "first answer" },
@@ -400,7 +400,7 @@ describe("runtime/history tools with fake backend", () => {
       messages: [
         {
           role: "assistant",
-          turn_index: 1,
+          turn_number: 1,
           message_id: "a1",
           hits: [
             {
