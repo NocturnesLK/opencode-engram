@@ -68,14 +68,14 @@ Assistant messages may additionally include:
   "messages": [
     {
       "role": "user",
-      "turn_index": 6,
+      "turn_number": 6,
       "message_id": "msg_011",
       "preview": "Please split the overview doc.",
       "attachment": ["1 image", "docs/engram-overview.md"]
     },
     {
       "role": "assistant",
-      "turn_index": 6,
+      "turn_number": 6,
       "message_id": "msg_012",
       "preview": "I'll move the tool contract to a separate document.",
       "tool": {
@@ -95,15 +95,15 @@ Returns a turn-level index of the session history.
 ### Parameters
 
 - `session_id`: Required. Target session ID.
-- `turn_index`: Optional. Target visible turn number. Omit to start from the latest visible turn.
-- `num_before`: Optional. Default `0`. Number of visible turns before `turn_index` to include.
-- `num_after`: Optional. Default `0`. Number of visible turns after `turn_index` to include.
+- `turn_number`: Optional. Target visible turn number. Omit to start from the latest visible turn.
+- `num_before`: Optional. Default `0`. Number of visible turns before `turn_number` to include.
+- `num_after`: Optional. Default `0`. Number of visible turns after `turn_number` to include.
 
 ### Behavior
 
 - Returns `turns[]` only.
 - `turns[]` is sorted in ascending turn order.
-- Each turn entry contains: `turn_index`, `user`, `assistant`.
+- Each turn entry contains: `turn_number`, `user`, `assistant`.
 - Turn previews use the same text-first, semantic-fallback logic as browse previews. A preview may still be `null` when that role is absent from the turn or no preview signal can be derived.
 - `user.message_id` is the unique user message ID for that turn.
 - `user.attachment` follows the same rules as `history_browse_messages` user `attachment`, and is omitted when empty.
@@ -111,7 +111,7 @@ Returns a turn-level index of the session history.
 - `assistant.tool` uses the same tool summary block shape as `history_browse_messages` assistant `tool`, and is omitted when no tool calls are present in the turn.
 - `assistant.modified` contains unique file paths modified by completed write-type tool calls in that turn, and is omitted when no modified file paths are detected.
 - For the current session, hidden compaction-only turns are omitted from the result while visible turns keep their original turn numbers.
-- If `turn_index` points to a hidden turn, the tool errors and asks the caller to retry with a nearby visible turn.
+- If `turn_number` points to a hidden turn, the tool errors and asks the caller to retry with a nearby visible turn.
 
 ### Return Example
 
@@ -119,7 +119,7 @@ Returns a turn-level index of the session history.
 {
   "turns": [
     {
-      "turn_index": 5,
+      "turn_number": 5,
       "user": {
         "preview": "Please split the overview doc.",
         "message_id": "msg_011"
@@ -157,7 +157,7 @@ Example:
 {
   "message_id": "msg_123",
   "role": "assistant",
-  "turn_index": 6,
+  "turn_number": 6,
   "time": "2026-03-20T10:01:00.000Z",
   "sections": [
     {
@@ -275,7 +275,7 @@ Search session history by keyword or literal string.
   "messages": [
     {
       "role": "assistant",
-      "turn_index": 5,
+      "turn_number": 5,
       "message_id": "msg_011",
       "hits": [
         {
@@ -302,7 +302,7 @@ Search session history by keyword or literal string.
 - `part_id is required`
 - `num_before must be a non-negative integer`
 - `num_after must be a non-negative integer`
-- `turn_index must be a non-negative integer`
+- `turn_number must be a non-negative integer`
 - `query is required`
 - `query is too long. Use shorter, more specific keywords.`
 - `type must be a pipe-delimited string containing one or more of: text, tool, reasoning`
@@ -315,7 +315,7 @@ Search session history by keyword or literal string.
 - `Failed to load session '<session_id>'. This may be a temporary issue — try again.`
 - `Message '<message_id>' not found in history. It may be an invalid message_id.`
 - `Message '<message_id>' is hidden in this session view. Try a nearby visible message instead.`
-- `The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit turn_index.`
+- `The requested window contains no visible turns. They may be hidden or out of range. Try adjusting the window size. If you want the latest turns, omit turn_number.`
 - `Failed to read session messages. This may be a temporary issue — try again.`
 
 ### Message Read Errors
